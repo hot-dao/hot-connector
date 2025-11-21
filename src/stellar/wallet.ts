@@ -1,11 +1,14 @@
 import { base64, base58, hex, base32 } from "@scure/base";
+import { ReviewFee, utils } from "@hot-labs/omni-sdk";
+import { Asset, Networks } from "@stellar/stellar-base";
 
-import { OmniWallet, WalletType } from "../OmniWallet";
+import { OmniWallet, WalletType } from "../omni/OmniWallet";
 import StellarConnector from "./connector";
+import { Token } from "../omni/token";
 
 interface ProtocolWallet {
-  address: string;
   signMessage: (message: string) => Promise<{ signedMessage: string }>;
+  address: string;
 }
 
 class StellarWallet extends OmniWallet {
@@ -27,6 +30,35 @@ class StellarWallet extends OmniWallet {
   get omniAddress() {
     const payload = base32.decode(this.address);
     return hex.encode(payload.slice(1, -2));
+  }
+
+  async fetchBalance(chain: number, token: string): Promise<bigint> {
+    const data = await fetch(`https://horizon.stellar.org/accounts/${this.address}`).then((res) => res.json());
+    const asset = (data.balances as any[]).find((ft: any) => {
+      const asset = ft.asset_type === "native" ? Asset.native() : new Asset(ft.asset_code, ft.asset_issuer);
+      const contractId = ft.asset_type === "native" ? "native" : asset.contractId(Networks.PUBLIC);
+      return token === contractId;
+    });
+
+    if (!asset) return 0n;
+
+    if (token === "native") {
+      const activatingReserve = asset.sponsor != null ? 0 : 1;
+      const trustlines = data.balances.filter((t: any) => t.asset_type !== "native" && t.sponsor == null);
+      const balance = BigInt(utils.parseAmount(asset.balance, 7));
+      const reserved = BigInt(utils.parseAmount(activatingReserve + 0.5 * (trustlines.length + (data.num_sponsoring || 0)), 7));
+      return utils.bigIntMax(0n, balance - BigInt(reserved));
+    }
+
+    return BigInt(utils.parseAmount(asset.balance, 7));
+  }
+
+  async transferFee(token: Token, receiver: string): Promise<ReviewFee> {
+    return new ReviewFee({ baseFee: 0n, gasLimit: 0n, chain: token.chain });
+  }
+
+  async transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }): Promise<string> {
+    throw new Error("Not implemented");
   }
 
   async signIntentsWithAuth(domain: string, intents?: Record<string, any>[]) {

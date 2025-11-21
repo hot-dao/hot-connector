@@ -28,7 +28,7 @@ export const Wibe = () => {
       if (!wallet) throw new Error("Wallet not found");
 
       const localWallet = new LocalWallet({ privateKey: (import.meta as any).env.VITE_PRIVATE_KEY! });
-      await localWallet.transfer({
+      await localWallet.omniTransfer({
         paymentId: `${wallet.omniAddress}-claim1`,
         token: OmniToken.USDT,
         to: wallet.omniAddress,

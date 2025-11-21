@@ -1,11 +1,12 @@
 import UniversalProvider from "@walletconnect/universal-provider";
 
-import { isInjected } from "../injected/hot";
-import { requestWebWallet } from "../injected/wallet";
-import { WalletConnectPopup } from "../popups/WalletConnectPopup";
-import { WalletsPopup } from "../popups/WalletsPopup";
-import { OmniConnector } from "../OmniConnector";
-import { WalletType } from "../OmniWallet";
+import { WalletConnectPopup } from "../ui/popups/WalletConnectPopup";
+import { WalletsPopup } from "../ui/popups/WalletsPopup";
+
+import { requestWebWallet } from "../hot-wallet/wallet";
+import { OmniConnector } from "../omni/OmniConnector";
+import { WalletType } from "../omni/OmniWallet";
+import { isInjected } from "../hot-wallet/hot";
 import EvmAccount from "./wallet";
 
 export interface EvmConnectorOptions {

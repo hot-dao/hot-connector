@@ -1,4 +1,4 @@
-import { GlobalSettings } from "../HotConnector";
+import { GlobalSettings } from "../settings";
 import { uuid4 } from "./hot";
 
 export const requestWebWallet = (chain?: number, address?: string) => (method: string, request: any) => {

@@ -1,4 +1,4 @@
-import { WalletType } from "../OmniWallet";
+import { WalletType } from "../../omni/OmniWallet";
 import { html } from "./html";
 import { Popup } from "./Popup";
 

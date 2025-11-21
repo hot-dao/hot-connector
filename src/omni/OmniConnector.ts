@@ -1,7 +1,8 @@
-import { LogoutPopup } from "./popups/LogoutPopup";
+import { LogoutPopup } from "../ui/popups/LogoutPopup";
+import { EventEmitter } from "../events";
+import { LocalStorage } from "../storage";
+
 import { OmniWallet, WalletType } from "./OmniWallet";
-import { EventEmitter } from "./events";
-import { LocalStorage } from "./storage";
 
 export abstract class OmniConnector<T extends OmniWallet = OmniWallet> {
   wallet: T | null = null;

@@ -1,9 +1,13 @@
 import { SendTransactionRequest, SignDataPayload, SignDataResponse } from "@tonconnect/ui";
+import { Address, comment, SenderArguments, toNano } from "@ton/core";
 import { toUserFriendlyAddress } from "@tonconnect/ui";
 import { base58, base64, hex } from "@scure/base";
 
-import { OmniWallet, WalletType } from "../OmniWallet";
+import { OmniWallet, WalletType } from "../omni/OmniWallet";
+import { createJettonTransferMsgParams, tonApi } from "./utils";
 import TonConnector from "./connector";
+import { ReviewFee } from "../omni/fee";
+import { Token } from "../omni/token";
 
 interface ProtocolWallet {
   sendTransaction: (params: SendTransactionRequest) => Promise<any>;
@@ -33,8 +37,84 @@ class TonWallet extends OmniWallet {
     return this.wallet.account.publicKey.toLowerCase();
   }
 
-  async sendTransaction(msgs: SendTransactionRequest) {
-    return this.wallet.sendTransaction(msgs);
+  async fetchBalance(chain: number, address: string) {
+    const owner = Address.parse(this.address);
+
+    if (address === "native") {
+      const balance = await tonApi.accounts.getAccount(owner);
+      return BigInt(balance.balance);
+    }
+
+    const jetton = await tonApi.accounts.getAccountJettonBalance(owner, Address.parse(address), { supported_extensions: ["custom_payload"] });
+    return BigInt(jetton.balance);
+  }
+
+  async waitNextSeqno(seqno: number): Promise<number> {
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    const nextSeqno = await tonApi.wallet.getAccountSeqno(Address.parse(this.address)).catch(() => ({ seqno: 0 }));
+    if (seqno >= nextSeqno.seqno) return await this.waitNextSeqno(seqno);
+    return nextSeqno.seqno;
+  }
+
+  async waitTransactionByMessageHash(pending: { prevHash: string; seqno: number; timestamp: number; lt: bigint }, attemps = 0): Promise<string> {
+    if (attemps > 3) return "";
+
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    const res = await tonApi.blockchain.getBlockchainAccountTransactions(Address.parse(this.address), { limit: 1, after_lt: BigInt(pending.lt) });
+
+    const tx = res.transactions[0];
+    if (tx.hash === pending.prevHash) return await this.waitTransactionByMessageHash(pending, attemps + 1);
+    if (!tx.success) throw tx.computePhase?.exitCodeDescription || "Transaction failed";
+    return tx.hash;
+  }
+
+  async sendTransaction(msgs: SenderArguments[]) {
+    const response = await tonApi.blockchain.getBlockchainAccountTransactions(Address.parse(this.address), { limit: 1 });
+    const { seqno } = await tonApi.wallet.getAccountSeqno(Address.parse(this.address));
+    const lastTransaction = response.transactions[0];
+
+    await this.wallet.sendTransaction({
+      validUntil: Date.now() + 200_000,
+      messages: msgs.map((tx) => ({
+        address: tx.to.toString({ bounceable: tx.bounce ? true : false }),
+        payload: tx.body?.toBoc().toString("base64"),
+        stateInit: tx.init?.data?.toBoc().toString("base64"),
+        amount: String(tx.value),
+      })),
+    });
+
+    await this.waitNextSeqno(seqno);
+    return await this.waitTransactionByMessageHash({
+      timestamp: Date.now(),
+      lt: lastTransaction.lt,
+      prevHash: lastTransaction.hash,
+      seqno,
+    });
+  }
+  async transferFee(): Promise<ReviewFee> {
+    return new ReviewFee({ baseFee: toNano(0.005), reserve: toNano(0.05), chain: 1111 });
+  }
+
+  async transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }) {
+    const memo = args.comment ? comment(args.comment) : null;
+
+    if (args.token.address === "native") {
+      const msg = { to: Address.parse(args.receiver), sendMode: 3, bounce: false, value: args.amount, body: memo };
+      const tx = await this.sendTransaction([msg]);
+      return tx;
+    }
+
+    // Jetton transfer
+    const msg = await createJettonTransferMsgParams({
+      recipient: Address.parse(args.receiver),
+      jetton: Address.parse(args.token.address),
+      address: Address.parse(this.address),
+      forwardPayload: memo,
+      amount: args.amount,
+    });
+
+    const tx = await this.sendTransaction([msg]);
+    return tx;
   }
 
   async signIntentsWithAuth(domain: string, intents?: Record<string, any>[]) {

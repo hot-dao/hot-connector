@@ -1,8 +1,8 @@
 import { base58 } from "@scure/base";
 
-import { OmniConnector } from "../OmniConnector";
-import { PasskeyPopup } from "../popups/PasskeyPopup";
-import { WalletType } from "../OmniWallet";
+import { OmniConnector } from "../omni/OmniConnector";
+import { PasskeyPopup } from "../ui/popups/PasskeyPopup";
+import { WalletType } from "../omni/OmniWallet";
 
 import { createNew, getRelayingPartyId } from "./service";
 import PasskeyWallet from "./wallet";

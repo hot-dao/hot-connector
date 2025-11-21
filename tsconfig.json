@@ -15,7 +15,7 @@
     "module": "CommonJS",
     "lib": ["ESNext", "dom"],
     "jsx": "react-jsx",
-    "jsxImportSource": "preact",
+    "jsxImportSource": "react",
     "resolveJsonModule": true
   },
   "include": ["./src"]

@@ -13,10 +13,12 @@ function addRegisteredWallet(wallet: Wallet) {
   cachedWalletsArray = undefined;
   registeredWalletsSet.add(wallet);
 }
+
 function removeRegisteredWallet(wallet: Wallet) {
   cachedWalletsArray = undefined;
   registeredWalletsSet.delete(wallet);
 }
+
 const listeners: { [E in WalletsEventNames]?: WalletsEventsListeners[E][] } = {};
 
 /**

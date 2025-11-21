@@ -1,9 +1,11 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 
-import { AuthPopup } from "./popups/AuthIntentPopup";
-import { AuthCommitment, OmniToken, OmniTokenMetadata, TokenBalance, TransferIntent } from "./types";
+import { AuthPopup } from "../ui/popups/AuthIntentPopup";
+import { AuthCommitment, OmniToken, OmniTokenMetadata, TokenBalance, TransferIntent } from "../types";
 import { OmniConnector } from "./OmniConnector";
-import Intents from "./Intents";
+import { Intents } from "./Intents";
+import { ReviewFee } from "./fee";
+import { Token } from "./token";
 
 export enum WalletType {
   NEAR = 1010,
@@ -35,8 +37,13 @@ export abstract class OmniWallet {
     await this.connector.disconnect({ silent });
   }
 
+  abstract transferFee(token: Token, receiver: string, amount: bigint): Promise<ReviewFee>;
+  abstract transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }): Promise<string>;
+
   abstract signIntentsWithAuth(domain: string, intents?: Record<string, any>[]): Promise<SignedAuth>;
   abstract signIntents(intents: Record<string, any>[], options?: { nonce?: Uint8Array; deadline?: number }): Promise<Record<string, any>>;
+
+  abstract fetchBalance(chain: number, address: string): Promise<bigint>;
 
   async executeIntents(intents: Record<string, any>[], hashes: string[] = []) {
     const signed = await this.signIntents(intents);
@@ -47,7 +54,7 @@ export abstract class OmniWallet {
     return true;
   }
 
-  async transfer(args: { token: OmniToken; amount: number; to: string; paymentId: string }) {
+  async omniTransfer(args: { token: OmniToken; amount: number; to: string; paymentId: string }) {
     const int = Math.floor(args.amount * 10 ** OmniTokenMetadata[args.token].decimals);
 
     const intent: TransferIntent = {

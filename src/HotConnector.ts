@@ -1,9 +1,10 @@
-import { MultichainPopup } from "./popups/MultichainPopup";
-import { EventEmitter } from "./events";
+import { MultichainPopup } from "./ui/popups/MultichainPopup";
+import { openPayment } from "./ui/Payment";
 
-import { requestWebWallet } from "./injected/wallet";
-import { OmniWallet, WalletType } from "./OmniWallet";
-import { OmniConnector } from "./OmniConnector";
+import { EventEmitter } from "./events";
+import { requestWebWallet } from "./hot-wallet/wallet";
+import { OmniWallet, WalletType } from "./omni/OmniWallet";
+import { OmniConnector } from "./omni/OmniConnector";
 
 import NearConnector from "./near/connector";
 import PasskeyConnector from "./passkey/connector";
@@ -11,6 +12,9 @@ import EvmConnector, { EvmConnectorOptions } from "./evm/connector";
 import SolanaConnector, { SolanaConnectorOptions } from "./solana/connector";
 import StellarConnector from "./stellar/connector";
 import TonConnector from "./ton/connector";
+import { bridge } from "./omni/bridge";
+import { OmniToken, Token } from "./omni/token";
+import { GlobalSettings } from "./settings";
 
 export const near = () => new NearConnector();
 export const evm = (options?: EvmConnectorOptions) => new EvmConnector(options);
@@ -23,25 +27,34 @@ interface HotConnectorOptions extends EvmConnectorOptions, SolanaConnectorOption
   webWallet?: string;
   enableGoogle?: boolean;
   connectors?: OmniConnector[];
+  tonApi?: string;
 }
-
-export const GlobalSettings = {
-  webWallet: "https://app.hot-labs.org",
-};
 
 export class HotConnector {
   public enableGoogle: boolean = false;
   public connectors: OmniConnector[] = [];
   private events = new EventEmitter<{ connect: { wallet: OmniWallet }; disconnect: { wallet: OmniWallet } }>();
 
+  tokens: Record<string, Token> = {};
+
   constructor(options?: HotConnectorOptions) {
     this.enableGoogle = options?.enableGoogle ?? false;
     this.connectors = options?.connectors || [near(), evm(options), solana(options), stellar(), ton()];
+
     GlobalSettings.webWallet = options?.webWallet ?? GlobalSettings.webWallet;
+    GlobalSettings.tonApi = options?.tonApi ?? GlobalSettings.tonApi;
 
     this.connectors.forEach((t) => {
       t.onConnect((payload) => this.events.emit("connect", payload));
       t.onDisconnect((payload) => this.events.emit("disconnect", payload));
+    });
+
+    this.onConnect((payload) => this.fetchTokens(payload.wallet));
+    this.onDisconnect((payload) => {
+      Object.keys(this.tokens).forEach((key) => {
+        if (this.tokens[key].type !== payload.wallet.type) return;
+        delete this.tokens[key];
+      });
     });
   }
 
@@ -49,16 +62,23 @@ export class HotConnector {
     return this.connectors.map((t) => t.wallet).filter((t) => t != null);
   }
 
-  addConnector(connector: OmniConnector) {
-    this.connectors.push(connector);
-    connector.onConnect((payload) => this.events.emit("connect", payload));
-    connector.onDisconnect((payload) => this.events.emit("disconnect", payload));
+  async fetchTokens(wallet: OmniWallet) {
+    const tokens = await bridge.getTokens();
+    tokens.forEach(async (token) => {
+      const balance = await wallet.fetchBalance(token.chain, token.address);
+      this.tokens[token.id] = token.setAmount(balance);
+    });
   }
 
-  removeConnector(connector: OmniConnector) {
-    this.connectors = this.connectors.filter((t) => t !== connector);
-    connector.removeAllListeners();
-    connector.disconnect();
+  token(chain: number, address: string) {
+    return this.tokens[`${chain}:${address}`];
+  }
+
+  async payment(id: OmniToken, amount: number, receiver: string) {
+    const tokens = await bridge.getTokens();
+    const ftToken = tokens.find((t) => t.omniAddress === id);
+    if (!ftToken) throw new Error("Token not found");
+    await openPayment(this, ftToken, ftToken.int(amount), receiver);
   }
 
   onConnect(handler: (payload: { wallet: OmniWallet }) => void) {

@@ -1,10 +1,27 @@
-import type { Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
-import type { Wallet, WalletAccount } from "@wallet-standard/base";
+import { Connection, TransactionInstruction, VersionedTransaction } from "@solana/web3.js";
+import { ComputeBudgetProgram, PublicKey, SystemProgram, TransactionMessage } from "@solana/web3.js";
 import { base64, base58, hex } from "@scure/base";
+import { utils } from "@hot-labs/omni-sdk";
+import {
+  TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
+  getMinimumBalanceForRentExemptAccount,
+  createAssociatedTokenAccountInstruction,
+  createTransferInstruction,
+  getAccount,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
+  createTransferCheckedInstruction,
+} from "@solana/spl-token";
 
-import { OmniWallet, WalletType } from "../OmniWallet";
-import { ISolanaProtocolWallet } from "./protocol";
 import SolanaConnector from "./connector";
+import { ISolanaProtocolWallet } from "./protocol";
+import { OmniWallet, WalletType } from "../omni/OmniWallet";
+import { Chains, Network } from "../omni/chains";
+import { ReviewFee } from "../omni/fee";
+import { Token } from "../omni/token";
+
+const connection = new Connection("https://api0.herewallet.app/api/v1/evm/rpc/1001");
 
 class SolanaWallet extends OmniWallet {
   readonly type = WalletType.SOLANA;
@@ -23,6 +40,17 @@ class SolanaWallet extends OmniWallet {
 
   get omniAddress() {
     return hex.encode(base58.decode(this.address)).toLowerCase();
+  }
+
+  async fetchBalance(chain: number, address: string) {
+    if (address === "native") {
+      const balance = await connection.getBalance(new PublicKey(this.address));
+      return BigInt(balance);
+    }
+
+    const ATA = getAssociatedTokenAddressSync(new PublicKey(address), new PublicKey(this.address));
+    const meta = await connection.getTokenAccountBalance(ATA);
+    return BigInt(meta.value.amount);
   }
 
   async disconnect(data?: { silent?: boolean }) {
@@ -44,8 +72,132 @@ class SolanaWallet extends OmniWallet {
     };
   }
 
-  async sendTransaction(transaction: Transaction | VersionedTransaction, connection: Connection, options?: any): Promise<string> {
-    return this.wallet.sendTransaction(transaction, connection, options);
+  async buildTranferInstructions(token: Token, amount: bigint, receiver: string, fee: ReviewFee) {
+    const destination = new PublicKey(receiver);
+    const owner = new PublicKey(this.address);
+
+    const reserve = await connection.getMinimumBalanceForRentExemption(0);
+    let additionalFee = 0n;
+
+    if (token.address === "native") {
+      return {
+        reserve,
+        additionalFee,
+        instructions: [
+          ComputeBudgetProgram.setComputeUnitPrice({ microLamports: Number(fee.priorityFee) }),
+          ComputeBudgetProgram.setComputeUnitLimit({ units: Number(fee.gasLimit) }),
+          SystemProgram.transfer({ fromPubkey: owner, toPubkey: destination, lamports: amount }),
+        ],
+      };
+    }
+
+    const mint = new PublicKey(token.address);
+    const mintAccount = await connection.getAccountInfo(mint);
+    const tokenProgramId = mintAccount?.owner.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+
+    const tokenFrom = getAssociatedTokenAddressSync(mint, owner, false, tokenProgramId);
+    const tokenTo = getAssociatedTokenAddressSync(mint, destination, false, tokenProgramId);
+
+    const instructions: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: Number(fee.baseFee) }),
+      ComputeBudgetProgram.setComputeUnitLimit({ units: Number(fee.gasLimit) }),
+    ];
+
+    const isRegistered = await getAccount(connection, tokenTo, "confirmed", tokenProgramId).catch(() => null);
+    if (isRegistered == null) {
+      const inst = createAssociatedTokenAccountInstruction(
+        new PublicKey(this.address),
+        tokenTo,
+        destination,
+        mint,
+        tokenProgramId,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+      instructions.push(inst);
+      additionalFee += BigInt(await getMinimumBalanceForRentExemptAccount(connection));
+    }
+
+    if (tokenProgramId === TOKEN_2022_PROGRAM_ID) {
+      instructions.push(createTransferCheckedInstruction(tokenFrom, mint, tokenTo, owner, amount, token.decimals, [], tokenProgramId));
+    } else {
+      instructions.push(createTransferInstruction(tokenFrom, tokenTo, owner, amount, [], tokenProgramId));
+    }
+
+    return { instructions, additionalFee, reserve };
+  }
+
+  async transferFee(token: Token, receiver: string): Promise<ReviewFee> {
+    const { blockhash } = await connection.getLatestBlockhash();
+    const fee = new ReviewFee({ chain: Network.Solana, gasLimit: 1_400_000n, baseFee: 100n });
+    const { instructions, additionalFee, reserve } = await this.buildTranferInstructions(token, 1n, receiver, fee);
+
+    const msgForEstimate = new TransactionMessage({ payerKey: new PublicKey(this.address), recentBlockhash: blockhash, instructions }).compileToV0Message();
+    const tx = new VersionedTransaction(msgForEstimate);
+
+    const priorityFeeData = await this.getPriorityFeeEstimate({
+      options: { includeAllPriorityFeeLevels: true },
+      transaction: base58.encode(tx.serialize()),
+    });
+
+    if (priorityFeeData?.priorityFeeLevels == null) throw "Failed to fetch gas";
+    const simulate = await connection.simulateTransaction(tx).catch(() => null);
+    const unitsConsumed = utils.bigIntMax(BigInt(simulate?.value.unitsConsumed || 10_000n), 10_000n);
+
+    const msgFee = await connection.getFeeForMessage(msgForEstimate);
+    const medium = BigInt(priorityFeeData.priorityFeeLevels.medium);
+    const high = BigInt(priorityFeeData.priorityFeeLevels.high);
+    const veryHigh = BigInt(priorityFeeData.priorityFeeLevels.veryHigh);
+    const baseFee = BigInt(msgFee.value);
+
+    return new ReviewFee({
+      chain: Network.Solana,
+      reserve: BigInt(reserve) + additionalFee,
+      gasLimit: unitsConsumed,
+      baseFee,
+      priorityFee: medium,
+      options: [
+        { priorityFee: medium, baseFee },
+        { priorityFee: high, baseFee },
+        { priorityFee: veryHigh, baseFee },
+      ],
+    });
+  }
+
+  async getPriorityFeeEstimate(params: any): Promise<any> {
+    let err;
+
+    const chain = await Chains.getChain(Network.Solana);
+    for (const rpc of chain.submitter || []) {
+      try {
+        const response = await fetch(rpc, {
+          body: JSON.stringify({ jsonrpc: "2.0", id: "helius-sdk", method: "getPriorityFeeEstimate", params: [params] }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+
+        if (!response.ok) throw "Server error";
+        const { result, error } = await response.json();
+        if (error) throw error.message;
+        if (result.error) throw result.error.message;
+        return result;
+      } catch (error) {
+        err = error;
+      }
+    }
+
+    throw new Error(`Error fetching priority fee estimate: ${err}`);
+  }
+
+  async transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee: ReviewFee }): Promise<string> {
+    const { instructions } = await this.buildTranferInstructions(args.token, args.amount, args.receiver, args.gasFee);
+    return await this.sendTransaction(instructions);
+  }
+
+  async sendTransaction(instructions: TransactionInstruction[]): Promise<string> {
+    const { blockhash } = await connection.getLatestBlockhash();
+    const message = new TransactionMessage({ payerKey: new PublicKey(this.address), recentBlockhash: blockhash, instructions });
+    const transaction = new VersionedTransaction(message.compileToV0Message());
+    return await this.wallet.sendTransaction(transaction, connection, { preflightCommitment: "confirmed" });
   }
 
   async signMessage(message: string) {

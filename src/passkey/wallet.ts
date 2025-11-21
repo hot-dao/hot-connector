@@ -1,16 +1,28 @@
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import { base58, base64, base64url, hex } from "@scure/base";
 
-import { OmniWallet, WalletType } from "../OmniWallet";
+import { OmniWallet, WalletType } from "../omni/OmniWallet";
 import { extractRawSignature, parsePublicKey } from "./utils";
 import { signMessage, WebauthnCredential } from "./service";
 import PasskeyConnector from "./connector";
+import { Token } from "../omni/token";
+import { ReviewFee } from "../omni/fee";
 
 class PasskeyWallet extends OmniWallet {
   readonly type = WalletType.PASSKEY;
 
   constructor(readonly connector: PasskeyConnector, readonly credential: WebauthnCredential) {
     super(connector);
+  }
+
+  transferFee(token: Token, receiver: string, amount: bigint): Promise<ReviewFee> {
+    throw new Error("Method not implemented.");
+  }
+  transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }): Promise<string> {
+    throw new Error("Method not implemented.");
+  }
+  fetchBalance(chain: number, address: string): Promise<bigint> {
+    throw new Error("Method not implemented.");
   }
 
   get address() {

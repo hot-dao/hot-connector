@@ -19,7 +19,9 @@
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "^1.9.1",
+    "@defuse-protocol/one-click-sdk-typescript": "^0.1.13",
     "@hot-labs/near-connect": "^0.6.10",
+    "@hot-labs/omni-sdk": "^2.21.3",
     "@near-js/crypto": "^2.3.3",
     "@near-js/providers": "^2.5.1",
     "@near-js/utils": "^2.2.4",
@@ -27,17 +29,23 @@
     "@peculiar/asn1-ecc": "^2.5.0",
     "@peculiar/asn1-schema": "^2.5.0",
     "@scure/base": "^2.0.0",
+    "@solana/spl-token": "^0.4.14",
+    "@ton-api/client": "^0.4.0",
+    "@ton/core": "^0.62.0",
     "@tonconnect/ui": "^2.2.0",
     "@walletconnect/universal-provider": "^2.23.0",
     "ethers": "^6.15.0",
-    "vite": "^7.2.4",
-    "vite-plugin-node-polyfills": "^0.24.0"
+    "react-dom": "^19.2.0"
   },
   "scripts": {
-    "build": "rm -rf build && yarn tsc"
+    "build": "rm -rf build && yarn tsc",
+    "dev": "vite build"
   },
   "devDependencies": {
+    "vite": "^7.2.4",
+    "vite-plugin-node-polyfills": "^0.24.0",
     "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.3",
     "tsc": "^2.0.4",
     "typescript": "^5.9.3"
   }

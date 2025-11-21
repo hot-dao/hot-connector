@@ -13,13 +13,17 @@ export { default as TonConnector } from "./ton/connector";
 export { default as PasskeyConnector } from "./passkey/connector";
 export { default as NearConnector } from "./near/connector";
 
-export { OmniWallet, WalletType } from "./OmniWallet";
-export { OmniConnector } from "./OmniConnector";
+export { OmniWallet, WalletType } from "./omni/OmniWallet";
+export { OmniConnector } from "./omni/OmniConnector";
 export { HotConnector } from "./HotConnector";
-export { default as Intents } from "./Intents";
+export { Intents } from "./omni/Intents";
+export { ReviewFee } from "./omni/fee";
+export { Token } from "./omni/token";
+export { bridge } from "./omni/bridge";
+export { Chains } from "./omni/chains";
 export * from "./types";
 
 export { near, evm, solana, stellar, ton, passkey } from "./HotConnector";
 export { useWibe3 } from "./useWibe3";
 
-import "./injected";
+import "./hot-wallet";

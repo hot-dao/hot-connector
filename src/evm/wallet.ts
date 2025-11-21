@@ -1,8 +1,12 @@
 import { base64, base58, hex } from "@scure/base";
-import { BrowserProvider, JsonRpcSigner, TransactionRequest } from "ethers";
+import { BrowserProvider, ethers, JsonRpcSigner, TransactionRequest } from "ethers";
 
-import { OmniWallet, WalletType } from "../OmniWallet";
+import { OmniWallet, WalletType } from "../omni/OmniWallet";
+import { ReviewFee } from "../omni/fee";
+import { Token } from "../omni/token";
 import EvmConnector from "./connector";
+import Provider from "./Provider";
+import { erc20abi } from "./abi";
 
 interface EvmProvider {
   address: string;
@@ -15,6 +19,14 @@ class EvmWallet extends OmniWallet {
 
   constructor(readonly connector: EvmConnector, readonly provider: EvmProvider) {
     super(connector);
+  }
+
+  private rpcs: Record<number, Provider> = {};
+  rpc(chain: number) {
+    if (this.rpcs[chain]) return this.rpcs[chain];
+    const rpc = new Provider(chain);
+    this.rpcs[chain] = rpc;
+    return rpc;
   }
 
   get address() {
@@ -30,7 +42,19 @@ class EvmWallet extends OmniWallet {
     this.provider.request({ method: "wallet_revokePermissions" });
   }
 
-  signIntentsWithAuth = async (domain: string, intents?: Record<string, any>[]) => {
+  async fetchBalance(chain: number, address: string) {
+    const rpc = this.rpc(chain);
+    if (address === "native") {
+      const balance = await rpc.getBalance(this.address);
+      return BigInt(balance);
+    }
+
+    const erc20 = new ethers.Contract(address, erc20abi, rpc);
+    const balance = await erc20.balanceOf(this.address);
+    return BigInt(balance);
+  }
+
+  async signIntentsWithAuth(domain: string, intents?: Record<string, any>[]) {
     const seed = hex.encode(window.crypto.getRandomValues(new Uint8Array(32)));
     const msgBuffer = new TextEncoder().encode(`${domain}_${seed}`);
     const nonce = await window.crypto.subtle.digest("SHA-256", new Uint8Array(msgBuffer));
@@ -42,13 +66,29 @@ class EvmWallet extends OmniWallet {
       address: this.address,
       seed,
     };
-  };
+  }
 
   async signMessage(msg: string) {
     const result: string = await this.provider.request({ method: "personal_sign", params: [msg, this.address] });
     const yInt = parseInt(result.slice(-2), 16);
     const isZero = yInt === 27 || yInt === 0;
     return hex.decode(result.slice(2, -2) + (isZero ? "00" : "01"));
+  }
+
+  async transferFee(token: Token, receiver: string, amount: bigint): Promise<ReviewFee> {
+    const rpc = this.rpc(token.chain);
+    const fee = ReviewFee.fromFeeData(await rpc.getFeeData(), token.chain);
+
+    if (token.address === "native") {
+      const gasLimit = await rpc.estimateGas({ to: receiver, value: 100n, ...fee.evmGas });
+      const extaLimit = BigInt(Math.floor(Number(gasLimit) * 1.3));
+      return fee.changeGasLimit(extaLimit);
+    }
+
+    const erc20 = new ethers.Contract(token.address, erc20abi, rpc);
+    const gasLimit = await erc20.transfer.estimateGas(receiver, amount, fee.evmGas);
+    const extaLimit = BigInt(Math.floor(Number(gasLimit) * 1.3));
+    return fee.changeGasLimit(extaLimit);
   }
 
   async sendTransaction(chain: number, request: TransactionRequest): Promise<string> {
@@ -58,6 +98,21 @@ class EvmWallet extends OmniWallet {
     await this.provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: `0x${chain.toString(16)}` }] });
     const tx = await signer.sendTransaction(request);
     return tx.hash;
+  }
+
+  async transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }): Promise<string> {
+    if (args.token.address === "native") {
+      return await this.sendTransaction(args.token.chain, {
+        ...args.gasFee?.evmGas,
+        from: this.address,
+        value: args.amount,
+        to: args.receiver,
+      });
+    }
+
+    const erc20 = new ethers.Contract(args.token.address, erc20abi, this.rpc(args.token.chain));
+    const tx = await erc20.transfer.populateTransaction(args.receiver, args.amount, args.gasFee?.evmGas);
+    return await this.sendTransaction(args.token.chain, tx);
   }
 
   async signIntents(intents: Record<string, any>[], options?: { deadline?: number; nonce?: Uint8Array }): Promise<Record<string, any>> {

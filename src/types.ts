@@ -1,4 +1,4 @@
-import { OmniWallet, WalletType } from "./OmniWallet";
+import { OmniWallet, WalletType } from "./omni/OmniWallet";
 
 export enum OmniToken {
   USDT = "nep141:usdt.tether-token.near",

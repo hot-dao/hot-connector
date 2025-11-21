@@ -1,4 +1,4 @@
-import QRCode, { darkQR } from "../qrcode";
+import QRCode, { darkQR } from "./qrcode";
 import { html } from "./html";
 import { Popup } from "./Popup";
 

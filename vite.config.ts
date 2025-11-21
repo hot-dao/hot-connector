@@ -1,8 +1,6 @@
 import { defineConfig } from "vite";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig({
-  plugins: [nodePolyfills()],
   build: {
     outDir: "build",
     minify: true,
@@ -11,6 +9,9 @@ export default defineConfig({
       entry: "src/index.ts",
       formats: ["es", "cjs", "iife"],
       fileName: (format) => `wibe3.${format}.js`,
+    },
+    rollupOptions: {
+      external: ["react", "react-dom"],
     },
   },
 });

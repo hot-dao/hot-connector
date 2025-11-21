@@ -4,6 +4,8 @@ import { TypedError } from "@near-js/types";
 
 let _nextId = 123;
 
+export const TGAS = 1_000_000_000_000n;
+
 class NetworkError extends Error {
   constructor(status: number, title: string, message: string) {
     super(`${status} ${title}: ${message}`);

@@ -1,9 +1,9 @@
 import { TonConnect, TonConnectUI } from "@tonconnect/ui";
 
-import { requestWebWallet } from "../injected/wallet";
-import { OmniConnector } from "../OmniConnector";
-import { WalletType } from "../OmniWallet";
-import { isInjected } from "../injected/hot";
+import { requestWebWallet } from "../hot-wallet/wallet";
+import { OmniConnector } from "../omni/OmniConnector";
+import { WalletType } from "../omni/OmniWallet";
+import { isInjected } from "../hot-wallet/hot";
 import TonWallet from "./wallet";
 
 class TonConnector extends OmniConnector<TonWallet> {

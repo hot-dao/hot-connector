@@ -1,24 +1,12 @@
+import { NearWalletBase, SignAndSendTransactionsParams, SignMessageParams, SignedMessage, SignAndSendTransactionParams } from "@hot-labs/near-connect";
 import type { FinalExecutionOutcome } from "@near-wallet-selector/core";
 import { base64, base58, hex } from "@scure/base";
 
-import {
-  NearWalletBase,
-  SignAndSendTransactionsParams,
-  SignMessageParams,
-  SignedMessage,
-  SignInParams,
-  SignAndSendTransactionParams,
-} from "@hot-labs/near-connect";
-
-import { OmniWallet, WalletType } from "../OmniWallet";
+import { OmniWallet, WalletType } from "../omni/OmniWallet";
+import { ReviewFee } from "../omni/fee";
+import { Token } from "../omni/token";
 import NearConnector from "./connector";
-
-type Account = {
-  accountId: string;
-  publicKey: string;
-};
-
-type Network = "mainnet" | "testnet";
+import { rpc, TGAS } from "./rpc";
 
 export default class NearWallet extends OmniWallet {
   readonly type = WalletType.NEAR;
@@ -36,27 +24,144 @@ export default class NearWallet extends OmniWallet {
   }
 
   async onDisconnect() {
-    this.wallet.signOut();
+    await this.wallet.signOut();
   }
 
-  async signIn(params: SignInParams): Promise<Array<Account>> {
-    return this.wallet.signIn(params);
-  }
-
-  async signOut(data?: { network?: Network }): Promise<void> {
-    return this.wallet.signOut(data);
-  }
-
-  async signAndSendTransaction(params: SignAndSendTransactionParams): Promise<FinalExecutionOutcome> {
+  async sendTransaction(params: SignAndSendTransactionParams): Promise<FinalExecutionOutcome> {
     return this.wallet.signAndSendTransaction(params);
   }
 
-  async signAndSendTransactions(params: SignAndSendTransactionsParams): Promise<Array<FinalExecutionOutcome>> {
+  async sendTransactions(params: SignAndSendTransactionsParams): Promise<Array<FinalExecutionOutcome>> {
     return this.wallet.signAndSendTransactions(params);
   }
 
   async signMessage(params: SignMessageParams): Promise<SignedMessage> {
     return this.wallet.signMessage(params);
+  }
+
+  public async getWrapNearDepositAction(amount: bigint, address: string) {
+    const storage = await rpc.viewMethod({
+      contractId: "wrap.near",
+      methodName: "storage_balance_of",
+      args: { account_id: address },
+    });
+
+    const depositAction = {
+      type: "FunctionCall",
+      params: {
+        methodName: "near_deposit",
+        deposit: String(amount),
+        gas: String(50n * TGAS),
+        args: {},
+      },
+    };
+
+    if (storage != null) return [depositAction];
+    return [
+      {
+        type: "FunctionCall",
+        params: {
+          gas: 30n * TGAS,
+          methodName: "storage_deposit",
+          deposit: `12500000000000000000000`,
+          args: { account_id: address, registration_only: true },
+        },
+      },
+      depositAction,
+    ];
+  }
+
+  async depositToOmni(amount: bigint, ft: string, receiver?: string) {
+    let depositWnear: any[] = [];
+    if (ft === "native") depositWnear = await this.getWrapNearDepositAction(amount, this.address);
+    const token = ft === "native" ? "wrap.near" : ft;
+    const actions = [
+      ...depositWnear,
+      {
+        type: "FunctionCall",
+        params: {
+          methodName: "ft_transfer_call",
+          args: { amount: String(amount), receiver_id: "intents.near", msg: receiver || this.omniAddress },
+          gas: String(80n * TGAS),
+          deposit: String(1n),
+        },
+      },
+    ];
+
+    return await this.sendTransaction({ actions, receiverId: token });
+  }
+
+  async needRegisterToken(token: string, address: string): Promise<boolean> {
+    const storage = await rpc
+      .viewMethod({
+        contractId: token,
+        methodName: "storage_balance_of",
+        args: { account_id: address },
+      })
+      .catch(() => null);
+    return storage == null;
+  }
+
+  async transferFee() {
+    return new ReviewFee({ baseFee: 0n, gasLimit: 300n * TGAS, chain: 1010 });
+  }
+
+  async fetchBalance(chain: number, address: string) {
+    if (chain !== 1010) throw "Invalid chain";
+
+    if (address === "native") {
+      const protocolConfig = await rpc.experimental_protocolConfig({ finality: "near-final" });
+      const state = await rpc.viewAccount(this.address, { finality: "near-final" });
+      const costPerByte = BigInt(protocolConfig.runtime_config.storage_amount_per_byte);
+      const usedOnStorage = BigInt(state.storage_usage) * costPerByte;
+      const locked = BigInt(state.locked);
+      const total = BigInt(state.amount) + locked;
+      const available = total - (locked > usedOnStorage ? locked : usedOnStorage);
+      return available;
+    }
+
+    const balance = await rpc.viewMethod({
+      args: { account_id: this.address },
+      contractId: address,
+      methodName: "ft_balance_of",
+    });
+
+    return BigInt(balance);
+  }
+
+  async transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }) {
+    if (args.token.address === "native") {
+      return await this.sendTransaction({
+        actions: [{ type: "Transfer", params: { deposit: String(args.amount) } }],
+        receiverId: args.receiver,
+      });
+    }
+
+    const actions: any[] = [
+      {
+        type: "FunctionCall",
+        params: {
+          methodName: "ft_transfer",
+          args: { receiver_id: args.receiver, amount: String(args.amount) },
+          gas: String(30n * TGAS),
+          deposit: String(1n),
+        },
+      },
+    ];
+
+    const needRegister = await this.needRegisterToken(args.token.address, args.receiver);
+    if (needRegister)
+      actions.unshift({
+        type: "FunctionCall",
+        params: {
+          gas: String(30n * TGAS),
+          methodName: "storage_deposit",
+          deposit: `12500000000000000000000`,
+          args: { account_id: args.receiver, registration_only: true },
+        },
+      });
+
+    return await this.sendTransaction({ receiverId: args.token.address, actions });
   }
 
   async signIntentsWithAuth(domain: string, intents?: Record<string, any>[]) {

@@ -1,10 +1,10 @@
 import { sep43Modules, HotWalletModule, StellarWalletsKit, WalletNetwork, ISupportedWallet } from "@creit.tech/stellar-wallets-kit";
 
-import { WalletType } from "../OmniWallet";
-import { OmniConnector } from "../OmniConnector";
-import { WalletsPopup } from "../popups/WalletsPopup";
-import { requestWebWallet } from "../injected/wallet";
-import { isInjected } from "../injected/hot";
+import { WalletType } from "../omni/OmniWallet";
+import { OmniConnector } from "../omni/OmniConnector";
+import { WalletsPopup } from "../ui/popups/WalletsPopup";
+import { requestWebWallet } from "../hot-wallet/wallet";
+import { isInjected } from "../hot-wallet/hot";
 import StellarWallet from "./wallet";
 
 class StellarConnector extends OmniConnector<StellarWallet> {

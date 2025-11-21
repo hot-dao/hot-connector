@@ -1,6 +1,7 @@
 import { useState } from "react";
 
-import { HotConnector, Intents, OmniWallet } from "../../src";
+import { HotConnector, Intents, OmniToken, OmniWallet } from "../../src";
+import { Network } from "../../src/omni/chains";
 
 export const MultichainExample = () => {
   const [wallets, setWallets] = useState<OmniWallet[]>([]);
@@ -27,6 +28,10 @@ export const MultichainExample = () => {
 
       <button className={"input-button"} onClick={() => connector.connect()}>
         Open connector
+      </button>
+
+      <button className={"input-button"} onClick={() => connector.payment(OmniToken.USDT, 1, "1lluzor.near")}>
+        Pay 1 USDT
       </button>
 
       {wallets.map(

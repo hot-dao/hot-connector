@@ -1,7 +1,9 @@
 import { KeyPair, KeyPairString } from "@near-js/crypto";
 import { base58 } from "@scure/base";
 
-import { OmniWallet, SignedAuth, WalletType } from "./OmniWallet";
+import { OmniWallet, SignedAuth, WalletType } from "./omni/OmniWallet";
+import { ReviewFee } from "./omni/fee";
+import { Token } from "./omni/token";
 
 class LocalWallet extends OmniWallet {
   readonly type = WalletType.NEAR;
@@ -23,6 +25,18 @@ class LocalWallet extends OmniWallet {
 
   get omniAddress() {
     return Buffer.from(this.#keyPair.getPublicKey().data).toString("hex").toLowerCase();
+  }
+
+  transferFee(token: Token, receiver: string, amount: bigint): Promise<ReviewFee> {
+    throw new Error("Method not implemented.");
+  }
+
+  transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }): Promise<string> {
+    throw new Error("Method not implemented.");
+  }
+
+  fetchBalance(chain: number, address: string): Promise<bigint> {
+    throw new Error("Method not implemented.");
   }
 
   async getAddress(): Promise<string> {

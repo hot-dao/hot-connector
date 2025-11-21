@@ -1,8 +1,8 @@
 import { NearConnector, SignAndSendTransactionParams, SignAndSendTransactionsParams, SignMessageParams } from "@hot-labs/near-connect";
 
-import { WalletType } from "../OmniWallet";
-import { OmniConnector } from "../OmniConnector";
-import { requestWebWallet } from "../injected/wallet";
+import { WalletType } from "../omni/OmniWallet";
+import { OmniConnector } from "../omni/OmniConnector";
+import { requestWebWallet } from "../hot-wallet/wallet";
 import NearWallet from "./wallet";
 
 class Connector extends OmniConnector<NearWallet> {

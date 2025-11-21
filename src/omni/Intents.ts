@@ -1,7 +1,7 @@
 import { FinalExecutionOutcome } from "@near-js/types";
-import { rpc } from "./NearRpc";
+import { rpc } from "../near/rpc";
 
-class Intents {
+class IntentsManager {
   async publishSignedIntents(signed: Record<string, any>[], hashes: string[] = []): Promise<string> {
     const res = await fetch("https://api0.herewallet.app/api/v1/evm/intent-solver", {
       headers: { "Content-Type": "application/json" },
@@ -138,4 +138,4 @@ class Intents {
   };
 }
 
-export default new Intents();
+export const Intents = new IntentsManager();

@@ -1,12 +1,13 @@
 import type { Wallet } from "@wallet-standard/base";
 import UniversalProvider from "@walletconnect/universal-provider";
 
-import { WalletType } from "../OmniWallet";
-import { OmniConnector } from "../OmniConnector";
-import { WalletsPopup } from "../popups/WalletsPopup";
-import { isInjected } from "../injected/hot";
+import { WalletsPopup } from "../ui/popups/WalletsPopup";
+import { WalletType } from "../omni/OmniWallet";
+import { OmniConnector } from "../omni/OmniConnector";
+import { requestWebWallet } from "../hot-wallet/wallet";
+
+import { isInjected } from "../hot-wallet/hot";
 import SolanaProtocolWallet from "./protocol";
-import { requestWebWallet } from "../injected/wallet";
 import SolanaWallet from "./wallet";
 import { getWallets } from "./wallets";
 
