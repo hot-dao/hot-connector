@@ -13,6 +13,15 @@ Implements NEAR Intents support for the following networks:
 
 Also supported: Passkey accounts and Google Auth via HOT MPC Network
 
+# Node polyfills
+
+Wibe3 require you to install node polyfills to work, for vite you need to complete the following extra steps:
+
+`npm install vite-plugin-node-polyfills`
+Then in your vite.config.ts add the polyfills plugin.
+
+## Getting started
+
 ```ts
 const connector = new HotConnector({
   enableGoogle: true,
@@ -25,29 +34,31 @@ const connector = new HotConnector({
   },
 });
 
-connector.onConnect(async ({ wallet }) => {
-  const address = await wallet.getAddress();
-
-  // Easy to interact with NEAR Intents on any wallet
-  const intentAddress = await wallet.getIntentsAddress();
-  const signed = await wallet.signIntents([{ intent: "token_diff", ... }])
-  await Intents.publishSignedIntents([signed]);
-});
-
+connector.onConnect(({ wallet }) => {});
 connector.onDisconnect(({ wallet }) => {});
-
 ```
 
-## TODO: simple api to interact with omni assets
+## HOT Pay
 
 ```ts
-// Open deposit flow from wallet to NEAR Intents
-await wallet.depositToken(OmniToken.USDT, 10);
+// Pay to you from any user connected wallet
+const receiver = await omni.account("ton", "EU...");
+await wallet.payment(omni.usdt(), receiver, 1);
+```
 
-// Abstract API to transfer OMNI Tokens
-const receiver = await IntentAccount(Network.TON, "EQ...");
-await wallet.transferToken(OmniToken.USDT, 2, receiver);
+## Intents builder
 
-// Withdraw to wallet!
-await wallet.withdrawToken(OmniToken.USDT, 2);
+```ts
+await wallet.intents
+  .authCall({ attachNear: 10000n, msg: "", contractId: "", tgas: 50n })
+  .transfer({ receiver: await omni.account("stellar", "..."), token: omni.usdc("stellar"), amount: 1 })
+  .tokenDiff({ from: omni.usdt("bnb", 10), to: omni.usdc("sol", 2) })
+  .attachHashes([])
+  .execute();
+```
+
+## Bridge tokens
+
+```ts
+await connector.openBridge();
 ```

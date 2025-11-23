@@ -5,7 +5,7 @@ import { base58, base64, hex } from "@scure/base";
 
 import { OmniWallet, WalletType } from "../omni/OmniWallet";
 import { createJettonTransferMsgParams, tonApi } from "./utils";
-import TonConnector from "./connector";
+import { OmniConnector } from "../omni/OmniConnector";
 import { ReviewFee } from "../omni/fee";
 import { Token } from "../omni/token";
 
@@ -18,7 +18,7 @@ interface ProtocolWallet {
 class TonWallet extends OmniWallet {
   readonly type = WalletType.TON;
 
-  constructor(readonly connector: TonConnector, readonly wallet: ProtocolWallet) {
+  constructor(readonly connector: OmniConnector, readonly wallet: ProtocolWallet) {
     super(connector);
   }
 

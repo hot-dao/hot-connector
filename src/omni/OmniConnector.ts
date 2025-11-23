@@ -1,11 +1,25 @@
-import { LogoutPopup } from "../ui/popups/LogoutPopup";
+import { makeObservable, observable, runInAction } from "mobx";
+
 import { EventEmitter } from "../events";
 import { LocalStorage } from "../storage";
 
-import { OmniWallet, WalletType } from "./OmniWallet";
+import { OmniWallet } from "./OmniWallet";
+import { openLogoutPopup } from "../ui/router";
 
-export abstract class OmniConnector<T extends OmniWallet = OmniWallet> {
-  wallet: T | null = null;
+export enum ConnectorType {
+  WALLET = "wallet",
+  SOCIAL = "social",
+}
+
+export interface OmniConnectorOption {
+  name: string;
+  icon: string;
+  id: string;
+}
+
+export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O extends OmniConnectorOption = OmniConnectorOption> {
+  wallets: T[] = [];
+  options: O[] = [];
 
   private storage = new LocalStorage();
   protected events = new EventEmitter<{
@@ -13,26 +27,39 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet> {
     disconnect: { wallet: T };
   }>();
 
-  abstract connect(): Promise<void>;
-  abstract silentDisconnect(): Promise<void>;
+  constructor() {
+    makeObservable(this, {
+      wallets: observable,
+      options: observable,
+    });
+  }
 
-  abstract isSupported: boolean;
-  abstract type: WalletType;
+  abstract silentDisconnect(): Promise<void>;
+  abstract connect(id?: string): Promise<void>;
+
+  abstract type: ConnectorType;
   abstract name: string;
   abstract icon: string;
   abstract id: string;
 
-  abstract connectWebWallet(address: string, publicKey?: string): void;
-
   protected setWallet(wallet: T) {
-    this.wallet = wallet;
+    runInAction(() => this.wallets.push(wallet));
     this.events.emit("connect", { wallet });
   }
 
   protected removeWallet() {
-    const wallet = this.wallet!;
-    this.wallet = null;
-    this.events.emit("disconnect", { wallet });
+    runInAction(() => {
+      const wallet = this.wallets.pop();
+      if (wallet) this.events.emit("disconnect", { wallet });
+    });
+  }
+
+  protected removeAllWallets(): void {
+    runInAction(() => {
+      const wallets = this.wallets;
+      this.wallets = [];
+      wallets.forEach((wallet) => this.events.emit("disconnect", { wallet }));
+    });
   }
 
   async setStorage(obj: { type?: string; id?: string; address?: string; publicKey?: string }) {
@@ -65,23 +92,13 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet> {
 
   async disconnect({ silent = false }: { silent?: boolean } = {}) {
     if (silent) return this.silentDisconnect();
-    return new Promise<void>((resolve, reject) => {
-      const popup = new LogoutPopup({
-        type: this.type,
-        onApprove: async () => {
-          await this.silentDisconnect();
-          this.removeWallet();
-          popup.destroy();
-          resolve();
-        },
-
-        onReject: () => {
-          reject(new Error("User rejected"));
-          popup.destroy();
-        },
-      });
-
-      popup.create();
-    });
+    try {
+      await openLogoutPopup(this);
+      await this.silentDisconnect();
+      this.removeWallet();
+    } catch (error) {
+      // User rejected - error is already handled by openLogoutPopup
+      throw error;
+    }
   }
 }

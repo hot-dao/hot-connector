@@ -1,46 +1,53 @@
-import { MultichainPopup } from "./ui/popups/MultichainPopup";
-import { openPayment } from "./ui/Payment";
+import { computed, makeObservable, observable, runInAction } from "mobx";
 
+import { openBridge, openConnector, openPayment, openProfile } from "./ui/router";
 import { EventEmitter } from "./events";
-import { requestWebWallet } from "./hot-wallet/wallet";
-import { OmniWallet, WalletType } from "./omni/OmniWallet";
+import { OmniWallet } from "./omni/OmniWallet";
 import { OmniConnector } from "./omni/OmniConnector";
 
 import NearConnector from "./near/connector";
-import PasskeyConnector from "./passkey/connector";
 import EvmConnector, { EvmConnectorOptions } from "./evm/connector";
 import SolanaConnector, { SolanaConnectorOptions } from "./solana/connector";
 import StellarConnector from "./stellar/connector";
+import CosmosConnector from "./cosmos/connector";
 import TonConnector from "./ton/connector";
-import { bridge } from "./omni/bridge";
-import { OmniToken, Token } from "./omni/token";
+import GoogleConnector from "./google";
+
+import { omni } from "./omni";
+import { Token } from "./omni/token";
 import { GlobalSettings } from "./settings";
+import { defaultTokens } from "./omni/list";
 
 export const near = () => new NearConnector();
 export const evm = (options?: EvmConnectorOptions) => new EvmConnector(options);
 export const solana = (options?: SolanaConnectorOptions) => new SolanaConnector(options);
 export const stellar = () => new StellarConnector();
+export const cosmos = () => new CosmosConnector();
 export const ton = () => new TonConnector();
-export const passkey = () => new PasskeyConnector();
-
+export const google = () => new GoogleConnector();
 interface HotConnectorOptions extends EvmConnectorOptions, SolanaConnectorOptions {
   webWallet?: string;
-  enableGoogle?: boolean;
   connectors?: OmniConnector[];
   tonApi?: string;
 }
 
 export class HotConnector {
-  public enableGoogle: boolean = false;
   public connectors: OmniConnector[] = [];
-  private events = new EventEmitter<{ connect: { wallet: OmniWallet }; disconnect: { wallet: OmniWallet } }>();
+  public tokens = defaultTokens.map((t: any) => new Token(t));
 
-  tokens: Record<string, Token> = {};
+  private events = new EventEmitter<{
+    connect: { wallet: OmniWallet };
+    disconnect: { wallet: OmniWallet };
+    tokensUpdate: { tokens: Token[] };
+  }>();
 
   constructor(options?: HotConnectorOptions) {
-    this.enableGoogle = options?.enableGoogle ?? false;
-    this.connectors = options?.connectors || [near(), evm(options), solana(options), stellar(), ton()];
+    makeObservable(this, {
+      tokens: observable,
+      wallets: computed,
+    });
 
+    this.connectors = [google(), near(), evm(options), solana(options), stellar(), ton(), cosmos()];
     GlobalSettings.webWallet = options?.webWallet ?? GlobalSettings.webWallet;
     GlobalSettings.tonApi = options?.tonApi ?? GlobalSettings.tonApi;
 
@@ -50,35 +57,44 @@ export class HotConnector {
     });
 
     this.onConnect((payload) => this.fetchTokens(payload.wallet));
-    this.onDisconnect((payload) => {
-      Object.keys(this.tokens).forEach((key) => {
-        if (this.tokens[key].type !== payload.wallet.type) return;
-        delete this.tokens[key];
-      });
+    this.onDisconnect(({ wallet }) => {
+      if (!wallet) return;
+      runInAction(() => this.tokens.forEach((t) => t.type === wallet.type && (t.amount = 0n)));
     });
+
+    this.updateRates();
   }
 
   get wallets(): OmniWallet[] {
-    return this.connectors.map((t) => t.wallet).filter((t) => t != null);
+    return this.connectors.flatMap((t) => t.wallets);
   }
 
-  async fetchTokens(wallet: OmniWallet) {
-    const tokens = await bridge.getTokens();
-    tokens.forEach(async (token) => {
-      const balance = await wallet.fetchBalance(token.chain, token.address);
-      this.tokens[token.id] = token.setAmount(balance);
+  async updateRates() {
+    const map = new Map<string, Token>();
+    this.tokens.forEach((t) => map.set(t.id, t));
+    const tokens = await omni.getTokens();
+    tokens.forEach((t: any) => {
+      if (map.has(t.id)) map.get(t.id)!.usd = t.usd;
+      else this.tokens.push(t);
     });
   }
 
-  token(chain: number, address: string) {
-    return this.tokens[`${chain}:${address}`];
+  async fetchTokens(wallet: OmniWallet) {
+    if (!this.tokens.length) {
+      const tokens = await omni.getTokens();
+      runInAction(() => (this.tokens = tokens));
+    }
+
+    this.tokens.forEach(async (token) => {
+      if (token.type !== wallet.type) return;
+      const balance = await wallet.fetchBalance(token.chain, token.address);
+      runInAction(() => (token.amount = balance));
+    });
   }
 
-  async payment(id: OmniToken, amount: number, receiver: string) {
-    const tokens = await bridge.getTokens();
-    const ftToken = tokens.find((t) => t.omniAddress === id);
-    if (!ftToken) throw new Error("Token not found");
-    await openPayment(this, ftToken, ftToken.int(amount), receiver);
+  async payment(token: Token, amount: number, receiver: string) {
+    if (!token) throw new Error("Token not found");
+    await openPayment(this, token, token.int(amount), receiver);
   }
 
   onConnect(handler: (payload: { wallet: OmniWallet }) => void) {
@@ -91,49 +107,13 @@ export class HotConnector {
     return () => this.events.off("disconnect", handler);
   }
 
-  async connectGoogle() {
-    const accounts = await requestWebWallet()("connect:google", {});
-    accounts.forEach((account: { type: number; address: string; publicKey: string }) => {
-      const connector = this.connectors.find((t) => t.type === account.type);
-      if (connector) connector.connectWebWallet(account.address, account.publicKey);
-    });
+  async openBridge() {
+    await openBridge(this);
   }
 
-  async connect(type?: WalletType | string) {
-    if (type) return this.connectors.find((t) => t.type === type || t.id === type)?.connect();
-
-    return new Promise<void>(async (resolve, reject) => {
-      const list = () => this.connectors.map((t) => ({ address: t.wallet?.address, name: t.name, icon: t.icon, id: t.id }));
-
-      const connectGoogle = async () => {
-        await this.connectGoogle();
-        popup.destroy();
-        resolve();
-      };
-
-      const popup = new MultichainPopup({
-        wallets: list(),
-        onGoogleConnect: this.enableGoogle ? connectGoogle : undefined,
-
-        onConnect: (type) => {
-          this.connect(type);
-          popup.destroy();
-          resolve();
-        },
-
-        onDisconnect: (type) => {
-          this.connectors.find((t) => t.id === type)?.disconnect();
-          popup.destroy();
-          resolve();
-        },
-
-        onReject: () => {
-          reject(new Error("User rejected"));
-          popup.destroy();
-        },
-      });
-
-      popup.create();
-    });
+  async connect(type?: string) {
+    if (this.wallets.length > 0) return openProfile(this);
+    const connector = this.connectors.find((t) => t.id === type);
+    await openConnector(this, connector);
   }
 }

@@ -1,10 +1,12 @@
 import { GetExecutionStatusResponse, OneClickService, OpenAPI, QuoteRequest, QuoteResponse } from "@defuse-protocol/one-click-sdk-typescript";
 import { Asset, Networks } from "@stellar/stellar-sdk";
-import { ReviewFee } from "@hot-labs/omni-sdk";
+import { makeObservable, observable } from "mobx";
 
 import { Network } from "./chains";
 import { Token } from "./token";
 import { OmniWallet } from "./OmniWallet";
+import { ReviewFee } from "./fee";
+import { defaultTokens } from "./list";
 
 OpenAPI.BASE = "https://1click.chaindefuser.com";
 OpenAPI.TOKEN = "";
@@ -34,8 +36,42 @@ export type BridgeReview = {
   statusMessage: string | null;
 };
 
-class OneClick {
-  private _tokens: Token[] = [];
+class Omni {
+  public tokens = defaultTokens.map((t: any) => new Token(t));
+
+  constructor() {
+    makeObservable(this, {
+      tokens: observable,
+    });
+  }
+
+  token(chain: number, address: string): Token | null {
+    return this.tokens.find((t) => t.chain === chain && t.address === address) ?? null;
+  }
+
+  bySymbol(token: string, chain?: number): Token {
+    return this.tokens.find((t) => t.symbol === token && (chain == null || t.chain === chain))!;
+  }
+
+  usdt(chain?: number): Token {
+    return this.bySymbol("USDT", chain);
+  }
+
+  usdc(chain?: number): Token {
+    return this.bySymbol("USDC", chain);
+  }
+
+  eth(chain?: number): Token {
+    return this.bySymbol("ETH", chain);
+  }
+
+  near(chain?: number): Token {
+    return this.bySymbol("BTC", chain);
+  }
+
+  sol(chain?: number): Token {
+    return this.bySymbol("SOL", chain);
+  }
 
   async getToken(chain: number, address: string): Promise<string | null> {
     if (chain === Network.Hot) return address;
@@ -59,20 +95,13 @@ class OneClick {
   }
 
   async getTokens(): Promise<Token[]> {
-    if (this._tokens.length > 0) return this._tokens;
+    if (this.tokens.length > 0) return this.tokens;
     const list = await OneClickService.getTokens();
-    return list.map((t) => new Token(t));
+    this.tokens = list.map((t) => new Token(t));
+    return this.tokens;
   }
 
-  async reviewSwap(request: {
-    sender: OmniWallet;
-    from: Token;
-    to: Token;
-    amount: bigint;
-    receiver: string;
-    slippage: number;
-    type?: "exactIn" | "exactOut";
-  }): Promise<BridgeReview> {
+  async reviewSwap(request: { sender: OmniWallet; from: Token; to: Token; amount: bigint; receiver: string; slippage: number; type?: "exactIn" | "exactOut" }): Promise<BridgeReview> {
     const intentFrom = await this.getToken(request.from.chain, request.from.address);
     const intentTo = await this.getToken(request.to.chain, request.to.address);
 
@@ -177,4 +206,4 @@ class OneClick {
   }
 }
 
-export const bridge = new OneClick();
+export const omni = new Omni();

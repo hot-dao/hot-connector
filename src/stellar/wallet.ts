@@ -1,10 +1,11 @@
 import { base64, base58, hex, base32 } from "@scure/base";
-import { ReviewFee, utils } from "@hot-labs/omni-sdk";
 import { Asset, Networks } from "@stellar/stellar-base";
 
 import { OmniWallet, WalletType } from "../omni/OmniWallet";
-import StellarConnector from "./connector";
-import { Token } from "../omni/token";
+import { OmniConnector } from "../omni/OmniConnector";
+import { formatter, Token } from "../omni/token";
+import { ReviewFee } from "../omni/fee";
+import { Network } from "../omni/chains";
 
 interface ProtocolWallet {
   signMessage: (message: string) => Promise<{ signedMessage: string }>;
@@ -14,7 +15,7 @@ interface ProtocolWallet {
 class StellarWallet extends OmniWallet {
   readonly type = WalletType.STELLAR;
 
-  constructor(readonly connector: StellarConnector, readonly wallet: ProtocolWallet) {
+  constructor(readonly connector: OmniConnector, readonly wallet: ProtocolWallet) {
     super(connector);
   }
 
@@ -33,8 +34,10 @@ class StellarWallet extends OmniWallet {
   }
 
   async fetchBalance(chain: number, token: string): Promise<bigint> {
+    if (chain !== Network.Stellar) throw "Invalid chain";
+
     const data = await fetch(`https://horizon.stellar.org/accounts/${this.address}`).then((res) => res.json());
-    const asset = (data.balances as any[]).find((ft: any) => {
+    const asset = (data.balances as any[])?.find((ft: any) => {
       const asset = ft.asset_type === "native" ? Asset.native() : new Asset(ft.asset_code, ft.asset_issuer);
       const contractId = ft.asset_type === "native" ? "native" : asset.contractId(Networks.PUBLIC);
       return token === contractId;
@@ -45,12 +48,12 @@ class StellarWallet extends OmniWallet {
     if (token === "native") {
       const activatingReserve = asset.sponsor != null ? 0 : 1;
       const trustlines = data.balances.filter((t: any) => t.asset_type !== "native" && t.sponsor == null);
-      const balance = BigInt(utils.parseAmount(asset.balance, 7));
-      const reserved = BigInt(utils.parseAmount(activatingReserve + 0.5 * (trustlines.length + (data.num_sponsoring || 0)), 7));
-      return utils.bigIntMax(0n, balance - BigInt(reserved));
+      const balance = BigInt(formatter.parseAmount(asset.balance, 7));
+      const reserved = BigInt(formatter.parseAmount(activatingReserve + 0.5 * (trustlines.length + (data.num_sponsoring || 0)), 7));
+      return formatter.bigIntMax(0n, balance - BigInt(reserved));
     }
 
-    return BigInt(utils.parseAmount(asset.balance, 7));
+    return BigInt(formatter.parseAmount(asset.balance, 7));
   }
 
   async transferFee(token: Token, receiver: string): Promise<ReviewFee> {

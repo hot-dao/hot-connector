@@ -1,0 +1,61 @@
+import { ReviewFee } from "../omni/fee";
+import { OmniWallet, SignedAuth, WalletType } from "../omni/OmniWallet";
+import { Token } from "../omni/token";
+import CosmosConnector from "./connector";
+
+interface ProtocolWallet {
+  disconnect: () => Promise<void>;
+  sendTransaction: (chain: string, signDoc: any) => Promise<string>;
+  address: string;
+  publicKey: string;
+}
+export default class CosmosWallet extends OmniWallet {
+  readonly type = WalletType.COSMOS;
+
+  constructor(readonly connector: CosmosConnector, readonly wallet: ProtocolWallet) {
+    super(connector);
+  }
+
+  get address() {
+    return this.wallet.address;
+  }
+
+  get publicKey() {
+    return this.wallet.publicKey;
+  }
+
+  get omniAddress() {
+    return this.wallet.publicKey;
+  }
+
+  async disconnect({ silent = false }: { silent?: boolean } = {}) {
+    super.disconnect({ silent });
+    this.wallet.disconnect();
+  }
+
+  transferFee(token: Token, receiver: string, amount: bigint): Promise<ReviewFee> {
+    throw new Error("Method not implemented.");
+  }
+
+  transfer(args: { chain: number; token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }): Promise<string> {
+    return this.wallet.sendTransaction(args.chain.toString(), {
+      bodyBytes: new Uint8Array(),
+      authInfoBytes: new Uint8Array(),
+      chainId: args.chain.toString(),
+      accountNumber: 12345,
+      sequence: 12345,
+    });
+  }
+
+  signIntentsWithAuth(domain: string, intents?: Record<string, any>[]): Promise<SignedAuth> {
+    throw new Error("Method not implemented.");
+  }
+
+  signIntents(intents: Record<string, any>[], options?: { nonce?: Uint8Array; deadline?: number }): Promise<Record<string, any>> {
+    throw new Error("Method not implemented.");
+  }
+
+  fetchBalance(chain: number, address: string): Promise<bigint> {
+    throw new Error("Method not implemented.");
+  }
+}

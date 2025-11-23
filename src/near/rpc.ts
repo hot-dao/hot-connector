@@ -138,7 +138,7 @@ export class NearRpc extends JsonRpcProvider {
 
     const req = await fetch(url, {
       body: JSON.stringify({ method, params, id: _nextId++, jsonrpc: "2.0" }),
-      headers: { "Content-Type": "application/json", Referer: "https://my.herewallet.app" },
+      headers: { "Content-Type": "application/json" },
       signal: controller.signal,
       method: "POST",
     }).catch(() => {

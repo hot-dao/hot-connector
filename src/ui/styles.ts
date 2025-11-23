@@ -18,12 +18,13 @@ ${id} .modal-container {
     width: 100%;
     height: 100%;
     z-index: 100000000;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.2);
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
     transition: opacity 0.2s ease-in-out;
+    backdrop-filter: blur(10px);
 }
 
 @media (max-width: 600px) {
@@ -38,7 +39,7 @@ ${id} .modal-content {
   align-items: center;
 
   max-width: 420px;
-  max-height: 615px;
+  max-height: 660px;
   width: 100%;
   border-radius: 24px;
   background: #0d0d0d;
@@ -129,35 +130,6 @@ ${id} .modal-body textarea {
   font-size: 12px;
 }
 
-${id} .modal-body input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  background:rgb(61, 61, 61);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  outline: none;
-  font-size: 16px;
-  transition: background 0.2s ease-in-out, border 0.2s ease-in-out;
-  font-family: ${font};
-}
-
-${id} .modal-body input:focus {
-  border: 1px solid rgba(255, 255, 255, 0.5);
-}
-
-${id} .modal-body button {
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  background: #fff;
-  color: #000;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background 0.2s ease-in-out;
-  margin-top: 16px;
-}
 
 ${id} .footer {
   width: 100%;
@@ -270,6 +242,26 @@ ${id} .qr-code {
   canvas {
     transform: translate(1px, 22px);
   }
+}
+
+
+${id} button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 24px;
+  background: #0e0e0e;
+  color: #e8e8e8 !important;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.2s ease-in-out;
+  margin-top: 16px;
+}
+
+${id} button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 ${id} .copy-button {

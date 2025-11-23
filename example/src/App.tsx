@@ -1,13 +1,12 @@
 import { useState } from "react";
 
-import { HotConnector, Intents, OmniToken, OmniWallet } from "../../src";
-import { Network } from "../../src/omni/chains";
+import { HotConnector, Intents, OmniWallet } from "../../src";
+import { omni } from "../../src/omni";
 
 export const MultichainExample = () => {
   const [wallets, setWallets] = useState<OmniWallet[]>([]);
   const [connector] = useState<HotConnector>(() => {
     const connector = new HotConnector({
-      enableGoogle: true,
       projectId: "1292473190ce7eb75c9de67e15aaad99",
       metadata: {
         name: "Example App",
@@ -30,7 +29,11 @@ export const MultichainExample = () => {
         Open connector
       </button>
 
-      <button className={"input-button"} onClick={() => connector.payment(OmniToken.USDT, 1, "1lluzor.near")}>
+      <button className={"input-button"} onClick={() => connector.openBridge()}>
+        Exchange
+      </button>
+
+      <button className={"input-button"} onClick={() => connector.payment(omni.usdt(), 1, "1lluzor.near")}>
         Pay 1 USDT
       </button>
 

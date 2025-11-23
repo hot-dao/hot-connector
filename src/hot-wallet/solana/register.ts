@@ -1,6 +1,4 @@
-// This is copied from @wallet-standard/wallet
-
-import type { DEPRECATED_WalletsWindow, Wallet, WalletEventsWindow, WindowRegisterWalletEvent, WindowRegisterWalletEventCallback } from "@wallet-standard/base";
+import type { Wallet, WalletEventsWindow, WindowRegisterWalletEvent, WindowRegisterWalletEventCallback } from "@wallet-standard/base";
 
 export function registerWallet(wallet: Wallet): void {
   const callback: WindowRegisterWalletEventCallback = ({ register }) => register(wallet);
@@ -43,12 +41,4 @@ class RegisterWalletEvent extends Event implements WindowRegisterWalletEvent {
   stopPropagation(): never {
     throw new Error("stopPropagation cannot be called");
   }
-}
-
-/** @deprecated */
-export function DEPRECATED_registerWallet(wallet: Wallet): void {
-  registerWallet(wallet);
-  try {
-    ((window as DEPRECATED_WalletsWindow).navigator.wallets ||= []).push(({ register }) => register(wallet));
-  } catch (error) {}
 }

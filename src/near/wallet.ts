@@ -1,17 +1,16 @@
 import { NearWalletBase, SignAndSendTransactionsParams, SignMessageParams, SignedMessage, SignAndSendTransactionParams } from "@hot-labs/near-connect";
-import type { FinalExecutionOutcome } from "@near-wallet-selector/core";
 import { base64, base58, hex } from "@scure/base";
 
+import { OmniConnector } from "../omni/OmniConnector";
 import { OmniWallet, WalletType } from "../omni/OmniWallet";
 import { ReviewFee } from "../omni/fee";
 import { Token } from "../omni/token";
-import NearConnector from "./connector";
 import { rpc, TGAS } from "./rpc";
 
 export default class NearWallet extends OmniWallet {
   readonly type = WalletType.NEAR;
 
-  constructor(readonly connector: NearConnector, readonly address: string, readonly publicKey: string, readonly wallet: NearWalletBase) {
+  constructor(readonly connector: OmniConnector, readonly address: string, readonly publicKey: string, readonly wallet: NearWalletBase) {
     super(connector);
   }
 
@@ -27,12 +26,14 @@ export default class NearWallet extends OmniWallet {
     await this.wallet.signOut();
   }
 
-  async sendTransaction(params: SignAndSendTransactionParams): Promise<FinalExecutionOutcome> {
-    return this.wallet.signAndSendTransaction(params);
+  async sendTransaction(params: SignAndSendTransactionParams): Promise<string> {
+    const result = await this.wallet.signAndSendTransaction(params);
+    return result.transaction.hash;
   }
 
-  async sendTransactions(params: SignAndSendTransactionsParams): Promise<Array<FinalExecutionOutcome>> {
-    return this.wallet.signAndSendTransactions(params);
+  async sendTransactions(params: SignAndSendTransactionsParams): Promise<Array<string>> {
+    const result = await this.wallet.signAndSendTransactions(params);
+    return result.map((r) => r.transaction.hash);
   }
 
   async signMessage(params: SignMessageParams): Promise<SignedMessage> {

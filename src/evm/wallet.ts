@@ -1,10 +1,10 @@
 import { base64, base58, hex } from "@scure/base";
 import { BrowserProvider, ethers, JsonRpcSigner, TransactionRequest } from "ethers";
 
+import { OmniConnector } from "../omni/OmniConnector";
 import { OmniWallet, WalletType } from "../omni/OmniWallet";
 import { ReviewFee } from "../omni/fee";
 import { Token } from "../omni/token";
-import EvmConnector from "./connector";
 import Provider from "./Provider";
 import { erc20abi } from "./abi";
 
@@ -17,7 +17,7 @@ class EvmWallet extends OmniWallet {
   readonly publicKey?: string;
   readonly type = WalletType.EVM;
 
-  constructor(readonly connector: EvmConnector, readonly provider: EvmProvider) {
+  constructor(readonly connector: OmniConnector, readonly provider: EvmProvider) {
     super(connector);
   }
 

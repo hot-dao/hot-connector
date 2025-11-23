@@ -18,7 +18,6 @@ import {
 } from "@solana/wallet-standard-features";
 import { Transaction, VersionedTransaction } from "@solana/web3.js";
 import type { Wallet } from "@wallet-standard/base";
-import { baseDecode } from "@near-js/utils";
 import {
   StandardConnect,
   type StandardConnectFeature,
@@ -32,6 +31,8 @@ import {
   type StandardEventsNames,
   type StandardEventsOnMethod,
 } from "@wallet-standard/features";
+import { base58 } from "@scure/base";
+
 import { GhostWalletAccount } from "./account";
 import { SOLANA_CHAINS, GhostFeature, GhostNamespace, isVersionedTransaction, SolanaChain, isSolanaChain, bytesEqual } from "./utils";
 
@@ -186,7 +187,7 @@ export class GhostWallet implements Wallet {
         skipPreflight,
       });
 
-      outputs.push({ signature: baseDecode(signature) });
+      outputs.push({ signature: base58.decode(signature) });
     } else if (inputs.length > 1) {
       for (const input of inputs) {
         outputs.push(...(await this._signAndSendTransaction(input)));

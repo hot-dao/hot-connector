@@ -1,15 +1,13 @@
-import type { Wallet } from "@wallet-standard/base";
 import UniversalProvider from "@walletconnect/universal-provider";
+import { Wallet } from "@wallet-standard/base";
+import { runInAction } from "mobx";
 
-import { WalletsPopup } from "../ui/popups/WalletsPopup";
-import { WalletType } from "../omni/OmniWallet";
-import { OmniConnector } from "../omni/OmniConnector";
-import { requestWebWallet } from "../hot-wallet/wallet";
+import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
 
 import { isInjected } from "../hot-wallet/hot";
 import SolanaProtocolWallet from "./protocol";
-import SolanaWallet from "./wallet";
 import { getWallets } from "./wallets";
+import SolanaWallet from "./wallet";
 
 export interface SolanaConnectorOptions {
   projectId?: string;
@@ -23,32 +21,27 @@ export interface SolanaConnectorOptions {
 
 const wallets = getWallets();
 
-class SolanaConnector extends OmniConnector<SolanaWallet> {
-  type = WalletType.SOLANA;
+class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet; name: string; icon: string; id: string }> {
+  type = ConnectorType.WALLET;
   name = "Solana Wallet";
   icon = "https://storage.herewallet.app/upload/8700f33153ad813e133e5bf9b791b5ecbeea66edca6b8d17aeccb8048eb29ef7.png";
   id = "solana";
-  isSupported = true;
 
-  wallets: Wallet[] = [];
   provider?: Promise<UniversalProvider>;
-  _popup: WalletsPopup | null = null;
 
   constructor(options?: SolanaConnectorOptions) {
     super();
 
-    wallets.get().forEach((wallet) => {
-      if (this.wallets.find((w) => w.name === wallet.name)) return;
-      this.wallets.push(wallet);
+    wallets.get().forEach((t) => {
+      if (this.options.find((w) => w.name === t.name)) return;
+      this.options.push({ wallet: t, name: t.name, icon: t.icon, id: t.name });
     });
 
-    this.getConnectedWallet().then(async ({ type, address, id }) => {
-      if (type === "web" && address) return this.connectWebWallet(address);
-
+    this.getConnectedWallet().then(async ({ id }) => {
       try {
-        const wallet = this.wallets.find((w) => w.name === id);
+        const wallet = this.options.find((w) => w.id === id);
         if (!wallet) return;
-        const protocolWallet = await SolanaProtocolWallet.connect(wallet, { silent: true });
+        const protocolWallet = await SolanaProtocolWallet.connect(wallet.wallet, { silent: true });
         this.setWallet(new SolanaWallet(this, protocolWallet));
       } catch {
         this.removeStorage();
@@ -56,10 +49,9 @@ class SolanaConnector extends OmniConnector<SolanaWallet> {
     });
 
     wallets.on("register", async (wallet) => {
-      if (this.wallets.find((w) => w.name === wallet.name)) return;
-      this.wallets.push(wallet);
-      this._popup?.update({
-        wallets: this.wallets.map((t) => ({ name: t.name, icon: t.icon, uuid: t.name, rdns: t.name })),
+      if (this.options.find((w) => w.id === wallet.name)) return;
+      runInAction(() => {
+        this.options.push({ wallet: wallet, name: wallet.name, icon: wallet.icon, id: wallet.name });
       });
 
       try {
@@ -73,21 +65,8 @@ class SolanaConnector extends OmniConnector<SolanaWallet> {
     });
 
     wallets.on("unregister", (wallet) => {
-      this.wallets = this.wallets.filter((w) => w.name !== wallet.name);
+      this.options = this.options.filter((w) => w.id !== wallet.name);
     });
-  }
-
-  connectWebWallet(address: string) {
-    const request = requestWebWallet(this.type, address);
-    this.setStorage({ type: "web", address });
-    this.setWallet(
-      new SolanaWallet(this, {
-        sendTransaction: async (transaction: any, _: any, options?: any) => await request("solana:sendTransaction", { transaction, options }),
-        signMessage: async (message: string) => await request("solana:signMessage", { message }),
-        disconnect: async () => {},
-        address,
-      })
-    );
   }
 
   async getConnectedWallet() {
@@ -95,45 +74,21 @@ class SolanaConnector extends OmniConnector<SolanaWallet> {
     return this.getStorage();
   }
 
-  async connect() {
+  async connect(id: string) {
     const provider = await this.provider;
     if (provider?.session) await provider.disconnect();
 
-    return new Promise<void>(async (resolve, reject) => {
-      this._popup = new WalletsPopup({
-        type: this.type,
-        wallets: this.wallets.map((t) => ({ name: t.name, icon: t.icon, uuid: t.name, rdns: t.name })),
+    provider?.cleanupPendingPairings();
+    const wallet = this.options.find((t) => t.id === id);
+    if (!wallet) return;
 
-        onReject: () => {
-          provider?.cleanupPendingPairings();
-          this._popup?.destroy();
-          this._popup = null;
-          reject();
-        },
-
-        onConnect: async (id: string) => {
-          provider?.cleanupPendingPairings();
-          const wallet = this.wallets.find((t) => t.name === id);
-          if (!wallet) return;
-
-          try {
-            this.setStorage({ type: "wallet", id });
-            const protocolWallet = await SolanaProtocolWallet.connect(wallet, { silent: false });
-            this.setWallet(new SolanaWallet(this, protocolWallet));
-            this._popup?.destroy();
-            this._popup = null;
-            resolve();
-          } catch (e) {
-            this.removeStorage();
-            this._popup?.destroy();
-            this._popup = null;
-            reject(e);
-          }
-        },
-      });
-
-      this._popup?.create();
-    });
+    try {
+      this.setStorage({ type: "wallet", id });
+      const protocolWallet = await SolanaProtocolWallet.connect(wallet.wallet, { silent: false });
+      this.setWallet(new SolanaWallet(this, protocolWallet));
+    } catch (e) {
+      this.removeStorage();
+    }
   }
 
   async silentDisconnect() {

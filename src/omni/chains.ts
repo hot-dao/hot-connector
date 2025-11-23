@@ -29,6 +29,12 @@ export enum Network {
   Zcash = -5,
   Btc = -6,
 
+  Xrp = -7,
+  Doge = -8,
+  Ada = -9,
+  Aptos = -10,
+  Sui = -11,
+
   OmniTon = 1117,
 
   Eth = 1,

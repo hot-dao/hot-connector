@@ -1,39 +1,13 @@
 import { useEffect, useState } from "react";
-import { createRoot } from "react-dom/client";
+import { observer } from "mobx-react-lite";
 
-import { bridge, BridgeReview } from "../omni/bridge";
 import { HotConnector } from "../HotConnector";
-import { formatter, Token } from "../omni/token";
-import Popup from "./Popup";
+import { omni, BridgeReview } from "../omni";
 import { Chains } from "../omni/chains";
+import { Token } from "../omni/token";
 
-export const openPayment = (connector: HotConnector, token: Token, amount: bigint, receiver: string) => {
-  const div = document.createElement("div");
-  document.body.appendChild(div);
-  const root = createRoot(div);
-  const promise = new Promise<BridgeReview>((resolve, reject) => {
-    root.render(
-      <Payment //
-        onReject={reject}
-        onSuccess={resolve}
-        connector={connector}
-        token={token}
-        amount={amount}
-        receiver={receiver}
-      />
-    );
-  });
-
-  return promise
-    .then((review) => {
-      root.unmount();
-      return review;
-    })
-    .catch((e) => {
-      root.unmount();
-      throw e;
-    });
-};
+import { TokenCard } from "./TokenCard";
+import Popup from "./Popup";
 
 interface PaymentProps {
   connector: HotConnector;
@@ -56,7 +30,7 @@ const Payment = ({ connector, token, amount, receiver, onReject, onSuccess }: Pa
     if (!sender) return;
 
     setIsQoute(false);
-    bridge
+    omni
       .reviewSwap({ sender, from: selected, to: token, amount: (amount * 1005n) / 1000n, receiver: receiver, slippage: 0.005, type: "exactOut" })
       .then(setQoute)
       .catch((e) => console.error(e))
@@ -69,7 +43,7 @@ const Payment = ({ connector, token, amount, receiver, onReject, onSuccess }: Pa
     if (!sender) return;
 
     setIsPaying(true);
-    bridge
+    omni
       .makeSwap(sender, qoute!, { log: (message) => console.log(message) })
       .then(onSuccess)
       .catch((e) => console.error(e))
@@ -86,22 +60,7 @@ const Payment = ({ connector, token, amount, receiver, onReject, onSuccess }: Pa
     return (
       <Popup header={<p>Pay ${token.readable(amount, token.usd)}</p>} onClose={() => onReject(new Error("User rejected"))}>
         {tokens.map((token) => (
-          <div key={token.id} onClick={() => setSelected(token)} className="connect-item">
-            <div style={{ position: "relative" }}>
-              <img src={token.icon} alt={token.symbol} style={{ borderRadius: "50%" }} />
-              <img src={Chains.get(token.chain).icon} alt={token.symbol} style={{ width: 14, height: 14, position: "absolute", bottom: 0, right: 0 }} />
-            </div>
-
-            <div className="connect-item-info">
-              <span>{token.symbol}</span>
-              <span>${formatter.amount(token.usd)}</span>
-            </div>
-
-            <div className="connect-item-info" style={{ alignItems: "flex-end" }}>
-              <span>{token.readable(token.amount)}</span>
-              <span>${token.readable(token.amount, token.usd)}</span>
-            </div>
-          </div>
+          <TokenCard key={token.id} token={token} onSelect={setSelected} />
         ))}
       </Popup>
     );
@@ -138,4 +97,4 @@ const Payment = ({ connector, token, amount, receiver, onReject, onSuccess }: Pa
   );
 };
 
-export default Payment;
+export default observer(Payment);

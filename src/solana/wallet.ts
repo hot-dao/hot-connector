@@ -1,7 +1,6 @@
 import { Connection, TransactionInstruction, VersionedTransaction } from "@solana/web3.js";
 import { ComputeBudgetProgram, PublicKey, SystemProgram, TransactionMessage } from "@solana/web3.js";
 import { base64, base58, hex } from "@scure/base";
-import { utils } from "@hot-labs/omni-sdk";
 import {
   TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
@@ -14,19 +13,19 @@ import {
   createTransferCheckedInstruction,
 } from "@solana/spl-token";
 
-import SolanaConnector from "./connector";
 import { ISolanaProtocolWallet } from "./protocol";
 import { OmniWallet, WalletType } from "../omni/OmniWallet";
+import { OmniConnector } from "../omni/OmniConnector";
+import { formatter, Token } from "../omni/token";
 import { Chains, Network } from "../omni/chains";
 import { ReviewFee } from "../omni/fee";
-import { Token } from "../omni/token";
 
 const connection = new Connection("https://api0.herewallet.app/api/v1/evm/rpc/1001");
 
 class SolanaWallet extends OmniWallet {
   readonly type = WalletType.SOLANA;
 
-  constructor(readonly connector: SolanaConnector, readonly wallet: ISolanaProtocolWallet) {
+  constructor(readonly connector: OmniConnector, readonly wallet: ISolanaProtocolWallet) {
     super(connector);
   }
 
@@ -105,14 +104,7 @@ class SolanaWallet extends OmniWallet {
 
     const isRegistered = await getAccount(connection, tokenTo, "confirmed", tokenProgramId).catch(() => null);
     if (isRegistered == null) {
-      const inst = createAssociatedTokenAccountInstruction(
-        new PublicKey(this.address),
-        tokenTo,
-        destination,
-        mint,
-        tokenProgramId,
-        ASSOCIATED_TOKEN_PROGRAM_ID
-      );
+      const inst = createAssociatedTokenAccountInstruction(new PublicKey(this.address), tokenTo, destination, mint, tokenProgramId, ASSOCIATED_TOKEN_PROGRAM_ID);
       instructions.push(inst);
       additionalFee += BigInt(await getMinimumBalanceForRentExemptAccount(connection));
     }
@@ -141,13 +133,13 @@ class SolanaWallet extends OmniWallet {
 
     if (priorityFeeData?.priorityFeeLevels == null) throw "Failed to fetch gas";
     const simulate = await connection.simulateTransaction(tx).catch(() => null);
-    const unitsConsumed = utils.bigIntMax(BigInt(simulate?.value.unitsConsumed || 10_000n), 10_000n);
+    const unitsConsumed = formatter.bigIntMax(BigInt(simulate?.value.unitsConsumed || 10_000n), 10_000n);
 
     const msgFee = await connection.getFeeForMessage(msgForEstimate);
     const medium = BigInt(priorityFeeData.priorityFeeLevels.medium);
     const high = BigInt(priorityFeeData.priorityFeeLevels.high);
     const veryHigh = BigInt(priorityFeeData.priorityFeeLevels.veryHigh);
-    const baseFee = BigInt(msgFee.value);
+    const baseFee = BigInt(msgFee.value || 0);
 
     return new ReviewFee({
       chain: Network.Solana,
