@@ -7,6 +7,11 @@ ${id} * {
   color: #fff;
 }
 
+#tc-widget-root {
+  z-index: 10000000000000;
+  position: fixed;
+}
+
 ${id} p, h1, h2, h3, h4, h5, h6 {
   margin: 0;
 }

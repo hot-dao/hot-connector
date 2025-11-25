@@ -1,15 +1,33 @@
 import { GetExecutionStatusResponse, OneClickService, OpenAPI, QuoteRequest, QuoteResponse } from "@defuse-protocol/one-click-sdk-typescript";
 import { Asset, Networks } from "@stellar/stellar-sdk";
+import { HotBridge, utils } from "@hot-labs/omni-sdk";
 import { makeObservable, observable } from "mobx";
 
-import { Network } from "./chains";
-import { Token } from "./token";
-import { OmniWallet } from "./OmniWallet";
-import { ReviewFee } from "./fee";
+import CosmosWallet from "../cosmos/wallet";
 import { defaultTokens } from "./list";
+import { OmniWallet } from "./OmniWallet";
+import { Network } from "./chains";
+import { ReviewFee } from "./fee";
+import { Token } from "./token";
 
 OpenAPI.BASE = "https://1click.chaindefuser.com";
 OpenAPI.TOKEN = "";
+
+export const bridge = new HotBridge({
+  api: ["https://dev.herewallet.app"],
+  solanaRpc: ["https://api0.herewallet.app/api/v1/solana/rpc/1001"],
+  logger: console,
+  cosmos: {
+    [Network.Juno]: {
+      contract: "juno1va9q7gma6l62aqq988gghv4r7u4hnlgm85ssmsdf9ypw77qfwa0qaz7ea4",
+      rpc: "https://juno-rpc.publicnode.com",
+      gasLimit: 200000n,
+      nativeToken: "ujuno",
+      chainId: "juno-1",
+      prefix: "juno",
+    },
+  },
+});
 
 export class UnsupportedDexError extends Error {
   constructor(message: string) {
@@ -53,6 +71,10 @@ class Omni {
     return this.tokens.find((t) => t.symbol === token && (chain == null || t.chain === chain))!;
   }
 
+  juno(chain?: number): Token {
+    return this.bySymbol("JUNO", chain);
+  }
+
   usdt(chain?: number): Token {
     return this.bySymbol("USDT", chain);
   }
@@ -92,6 +114,61 @@ class Omni {
     });
 
     return token?.omniAddress || null;
+  }
+
+  async deposit(args: { sender: OmniWallet; token: Token; amount: bigint; receiver: string; onMessage: (message: string) => void }) {
+    const { sender, token, amount, receiver, onMessage } = args;
+    onMessage("Sending deposit transaction");
+
+    if (utils.isCosmos(token.chain) && sender instanceof CosmosWallet) {
+      const cosmosBridge = await bridge.cosmos();
+      const hash = await cosmosBridge.deposit({
+        sendTransaction: async (tx: any) => sender.sendTransaction(tx),
+        senderPublicKey: sender.publicKey!,
+        intentAccount: receiver,
+        sender: sender.address,
+        token: token.address,
+        chain: token.chain,
+        amount: amount,
+      });
+
+      onMessage("Waiting for deposit");
+      const deposit = await bridge.waitPendingDeposit(token.chain, hash, receiver);
+      onMessage("Finishing deposit");
+      await bridge.finishDeposit(deposit);
+      onMessage("Deposit finished");
+    }
+  }
+
+  async withdraw(args: { sender: OmniWallet; relayer?: OmniWallet; token: Token; amount: bigint; receiver: string; onMessage: (message: string) => void }) {
+    const { relayer, sender, token, amount, receiver, onMessage } = args;
+
+    onMessage("Signing withdrawal");
+    const result = await bridge.withdrawToken({
+      signIntents: async (intents: any) => sender.signIntents(intents),
+      intentAccount: sender.omniAddress,
+      receiver: receiver,
+      token: token.address,
+      chain: token.chain,
+      gasless: false,
+      amount: amount,
+    });
+
+    if (result?.nonce) {
+      onMessage("Waiting for withdrawal");
+      const pending = await bridge.getPendingWithdrawal(result.nonce);
+
+      if (utils.isCosmos(pending.chain)) {
+        if (!(relayer instanceof CosmosWallet)) throw new Error("Relayer must be a Cosmos wallet");
+        const cosmosBridge = await bridge.cosmos();
+        onMessage("Sending withdrawal transaction");
+        await cosmosBridge.withdraw({
+          sendTransaction: async (tx: any) => relayer.sendTransaction(tx),
+          sender: relayer.address,
+          ...pending,
+        });
+      }
+    }
   }
 
   async getTokens(): Promise<Token[]> {

@@ -35,6 +35,8 @@ export enum Network {
   Aptos = -10,
   Sui = -11,
 
+  Juno = 4444118,
+  Gonka = 4444119,
   OmniTon = 1117,
 
   Eth = 1,

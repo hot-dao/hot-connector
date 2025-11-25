@@ -1,13 +1,12 @@
 import { useState } from "react";
-
-import { HotConnector, Intents, OmniWallet } from "../../src";
-import { omni } from "../../src/omni";
+import { HotConnector, Intents, OmniWallet, omni } from "@hot-labs/wibe3";
 
 export const MultichainExample = () => {
   const [wallets, setWallets] = useState<OmniWallet[]>([]);
   const [connector] = useState<HotConnector>(() => {
     const connector = new HotConnector({
       projectId: "1292473190ce7eb75c9de67e15aaad99",
+      tonWalletsUrl: "http://localhost:1241/hot-connector/tonconnect-manifest.json",
       metadata: {
         name: "Example App",
         description: "Example App",
@@ -31,6 +30,14 @@ export const MultichainExample = () => {
 
       <button className={"input-button"} onClick={() => connector.openBridge()}>
         Exchange
+      </button>
+
+      <button className={"input-button"} onClick={() => connector.deposit(omni.juno(), 1)}>
+        Deposit 1 JUNO
+      </button>
+
+      <button className={"input-button"} onClick={() => connector.withdraw(omni.juno(), 1)}>
+        Withdraw 1 JUNO
       </button>
 
       <button className={"input-button"} onClick={() => connector.payment(omni.usdt(), 1, "1lluzor.near")}>

@@ -5,7 +5,7 @@ import CosmosConnector from "./connector";
 
 interface ProtocolWallet {
   disconnect: () => Promise<void>;
-  sendTransaction: (chain: string, signDoc: any) => Promise<string>;
+  sendTransaction: (signDoc: any) => Promise<string>;
   address: string;
   publicKey: string;
 }
@@ -33,12 +33,16 @@ export default class CosmosWallet extends OmniWallet {
     this.wallet.disconnect();
   }
 
+  sendTransaction(signDoc: any): Promise<string> {
+    return this.wallet.sendTransaction(signDoc);
+  }
+
   transferFee(token: Token, receiver: string, amount: bigint): Promise<ReviewFee> {
     throw new Error("Method not implemented.");
   }
 
   transfer(args: { chain: number; token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }): Promise<string> {
-    return this.wallet.sendTransaction(args.chain.toString(), {
+    return this.wallet.sendTransaction({
       bodyBytes: new Uint8Array(),
       authInfoBytes: new Uint8Array(),
       chainId: args.chain.toString(),

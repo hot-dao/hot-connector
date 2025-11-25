@@ -6,7 +6,7 @@ import { HotConnector } from "../HotConnector";
 import { TokenCard } from "./TokenCard";
 import { Chains } from "../omni/chains";
 
-import { openSelectTokenPopup } from "./router";
+import { openConnector, openSelectTokenPopup } from "./router";
 import Popup from "./Popup";
 
 export const SelectTokenPopup = ({ hot, initialChain, onClose, onSelect }: { hot: HotConnector; initialChain?: number; onClose: () => void; onSelect: (token: Token) => void }) => {
@@ -127,7 +127,7 @@ const Bridge = ({ hot, onClose }: { hot: HotConnector; onClose: () => void }) =>
       <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
         <div className="card">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }} onClick={() => openConnector(hot)}>
               <p>From</p>
               <div className="small-button">{formatter.truncateAddress(sender?.address ?? "Connect wallet")}</div>
             </div>
@@ -164,7 +164,9 @@ const Bridge = ({ hot, onClose }: { hot: HotConnector; onClose: () => void }) =>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <p>To</p>
-              <div className="small-button">{formatter.truncateAddress(receipient?.address ?? "Connect wallet")}</div>
+              <div className="small-button" onClick={() => openConnector(hot)}>
+                {formatter.truncateAddress(receipient?.address ?? "Connect wallet")}
+              </div>
             </div>
             <p>${to.readable(review?.amountOut ?? 0, to.usd)}</p>
           </div>

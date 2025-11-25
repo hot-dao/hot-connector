@@ -8,6 +8,8 @@ import Payment from "./Payment";
 import LogoutPopup from "./LogoutPopup";
 import Bridge, { SelectTokenPopup } from "./Bridge";
 import Connector from "./ConnectWallet";
+import Deposit from "./OmniDeposit";
+import Withdraw from "./OmniWithdraw";
 import Profile from "./Profile";
 
 export const openPayment = (connector: HotConnector, token: Token, amount: bigint, receiver: string) => {
@@ -43,5 +45,17 @@ export const openProfile = (hot: HotConnector) => {
 export const openSelectTokenPopup = ({ hot, initialChain, onSelect }: { hot: HotConnector; initialChain?: number; onSelect: (token: Token) => void }) => {
   return present<Token | null>((resolve, reject) => {
     return <SelectTokenPopup hot={hot} initialChain={initialChain} onClose={reject} onSelect={(t) => (onSelect(t), reject())} />;
+  });
+};
+
+export const openDeposit = (hot: HotConnector, token: Token, amount: number) => {
+  return present<void>((resolve, reject) => {
+    return <Deposit onClose={reject} onSuccess={resolve} hot={hot} token={token} amount={amount} />;
+  });
+};
+
+export const openWithdraw = (hot: HotConnector, token: Token, amount: number) => {
+  return present<void>((resolve, reject) => {
+    return <Withdraw onClose={reject} onSuccess={resolve} hot={hot} token={token} amount={amount} />;
   });
 };

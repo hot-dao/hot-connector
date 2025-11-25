@@ -4,6 +4,7 @@ export { default as SolanaWallet } from "./solana/wallet";
 export { default as StellarWallet } from "./stellar/wallet";
 export { default as TonWallet } from "./ton/wallet";
 export { default as NearWallet } from "./near/wallet";
+export { default as CosmosWallet } from "./cosmos/wallet";
 
 export { default as EvmConnector } from "./evm/connector";
 export { default as SolanaConnector } from "./solana/connector";

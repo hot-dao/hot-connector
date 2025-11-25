@@ -9,6 +9,9 @@ export enum OmniToken {
 }
 
 export const chainsMap: Record<number, string> = {
+  [Network.Juno]: "juno",
+  [Network.Gonka]: "gonka",
+  [Network.Monad]: "monad",
   [Network.Near]: "near",
   [Network.Eth]: "eth",
   [Network.Solana]: "sol",
@@ -66,8 +69,11 @@ export class Token {
   get type() {
     if (this.chain === Network.Near) return WalletType.NEAR;
     if (this.chain === Network.Solana) return WalletType.SOLANA;
+    if (this.chain === Network.OmniTon) return WalletType.TON;
     if (this.chain === Network.Ton) return WalletType.TON;
     if (this.chain === Network.Stellar) return WalletType.STELLAR;
+    if (this.chain === Network.Juno) return WalletType.COSMOS;
+    if (this.chain === Network.Gonka) return WalletType.COSMOS;
     return WalletType.EVM;
   }
 

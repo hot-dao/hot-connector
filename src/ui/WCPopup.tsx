@@ -15,9 +15,7 @@ const WalletConnectPopupComponent: React.FC<WalletConnectPopupProps> = ({ uri: i
   const qrCodeInstanceRef = useRef<QRCode | null>(null);
 
   useEffect(() => {
-    if (onUpdateUriRef) {
-      onUpdateUriRef(setUri);
-    }
+    onUpdateUriRef?.(setUri);
   }, [onUpdateUriRef]);
 
   useEffect(() => {
@@ -31,6 +29,7 @@ const WalletConnectPopupComponent: React.FC<WalletConnectPopupProps> = ({ uri: i
     if (qrCodeInstanceRef.current) {
       qrCodeInstanceRef.current.stopAnimate();
     }
+
     if (qrCodeRef.current) {
       qrCodeRef.current.innerHTML = "";
     }

@@ -1,31 +1,38 @@
 import { computed, makeObservable, observable, runInAction } from "mobx";
 
-import { openBridge, openConnector, openPayment, openProfile } from "./ui/router";
-import { EventEmitter } from "./events";
-import { OmniWallet } from "./omni/OmniWallet";
+import { openBridge, openConnector, openPayment, openProfile, openDeposit, openWithdraw } from "./ui/router";
+import { OmniWallet, WalletType } from "./omni/OmniWallet";
 import { OmniConnector } from "./omni/OmniConnector";
 
 import NearConnector from "./near/connector";
 import EvmConnector, { EvmConnectorOptions } from "./evm/connector";
 import SolanaConnector, { SolanaConnectorOptions } from "./solana/connector";
+import CosmosConnector, { CosmosConnectorOptions } from "./cosmos/connector";
+import TonConnector, { TonConnectorOptions } from "./ton/connector";
 import StellarConnector from "./stellar/connector";
-import CosmosConnector from "./cosmos/connector";
-import TonConnector from "./ton/connector";
 import GoogleConnector from "./google";
 
-import { omni } from "./omni";
+import { bridge, omni } from "./omni";
 import { Token } from "./omni/token";
 import { GlobalSettings } from "./settings";
 import { defaultTokens } from "./omni/list";
+import { EventEmitter } from "./events";
+
+import NearWallet from "./near/wallet";
+import EvmWallet from "./evm/wallet";
+import SolanaWallet from "./solana/wallet";
+import StellarWallet from "./stellar/wallet";
+import TonWallet from "./ton/wallet";
+import CosmosWallet from "./cosmos/wallet";
 
 export const near = () => new NearConnector();
 export const evm = (options?: EvmConnectorOptions) => new EvmConnector(options);
 export const solana = (options?: SolanaConnectorOptions) => new SolanaConnector(options);
 export const stellar = () => new StellarConnector();
-export const cosmos = () => new CosmosConnector();
-export const ton = () => new TonConnector();
+export const cosmos = (options?: CosmosConnectorOptions) => new CosmosConnector(options);
+export const ton = (options?: TonConnectorOptions) => new TonConnector(options);
 export const google = () => new GoogleConnector();
-interface HotConnectorOptions extends EvmConnectorOptions, SolanaConnectorOptions {
+interface HotConnectorOptions extends EvmConnectorOptions, SolanaConnectorOptions, TonConnectorOptions {
   webWallet?: string;
   connectors?: OmniConnector[];
   tonApi?: string;
@@ -45,9 +52,15 @@ export class HotConnector {
     makeObservable(this, {
       tokens: observable,
       wallets: computed,
+      near: computed,
+      evm: computed,
+      solana: computed,
+      stellar: computed,
+      ton: computed,
+      cosmos: computed,
     });
 
-    this.connectors = [google(), near(), evm(options), solana(options), stellar(), ton(), cosmos()];
+    this.connectors = [google(), near(), evm(options), solana(options), stellar(), ton(options), cosmos()];
     GlobalSettings.webWallet = options?.webWallet ?? GlobalSettings.webWallet;
     GlobalSettings.tonApi = options?.tonApi ?? GlobalSettings.tonApi;
 
@@ -67,6 +80,30 @@ export class HotConnector {
 
   get wallets(): OmniWallet[] {
     return this.connectors.flatMap((t) => t.wallets);
+  }
+
+  get near(): NearWallet | null {
+    return this.wallets.find((w) => w.type === WalletType.NEAR) as NearWallet | null;
+  }
+
+  get evm(): EvmWallet | null {
+    return this.wallets.find((w) => w.type === WalletType.EVM) as EvmWallet | null;
+  }
+
+  get solana(): SolanaWallet | null {
+    return this.wallets.find((w) => w.type === WalletType.SOLANA) as SolanaWallet | null;
+  }
+
+  get stellar(): StellarWallet | null {
+    return this.wallets.find((w) => w.type === WalletType.STELLAR) as StellarWallet | null;
+  }
+
+  get ton(): TonWallet | null {
+    return this.wallets.find((w) => w.type === WalletType.TON) as TonWallet | null;
+  }
+
+  get cosmos(): CosmosWallet | null {
+    return this.wallets.find((w) => w.type === WalletType.COSMOS) as CosmosWallet | null;
   }
 
   async updateRates() {
@@ -105,6 +142,14 @@ export class HotConnector {
   onDisconnect(handler: (payload: { wallet: OmniWallet }) => void) {
     this.events.on("disconnect", handler);
     return () => this.events.off("disconnect", handler);
+  }
+
+  async deposit(token: Token, amount: number) {
+    await openDeposit(this, token, amount);
+  }
+
+  async withdraw(token: Token, amount: number) {
+    await openWithdraw(this, token, amount);
   }
 
   async openBridge() {

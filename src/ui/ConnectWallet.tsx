@@ -28,7 +28,7 @@ const Connector: React.FC<MultichainPopupProps> = ({ hot, onClose, connector: in
     return (
       <Popup header={<p>Connecting</p>} onClose={onClose}>
         <div style={{ width: "100%", height: 300, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 16 }}>
-          <img src={wallet.icon} alt={wallet.name} style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 16 }} />
+          <img src={wallet.icon} alt={wallet.name} style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 16, background: "#000" }} />
           <h3 style={{ textAlign: "center" }}>{wallet.name}</h3>
         </div>
       </Popup>
@@ -48,7 +48,7 @@ const Connector: React.FC<MultichainPopupProps> = ({ hot, onClose, connector: in
               onClose();
             }}
           >
-            <img src={wallet.icon} alt={wallet.name} />
+            <img src={wallet.icon} style={{ background: "#000" }} />
             <div className="connect-item-info">
               <span>{wallet.name}</span>
             </div>
@@ -65,7 +65,9 @@ const Connector: React.FC<MultichainPopupProps> = ({ hot, onClose, connector: in
     <Popup header={<p>Select network</p>} onClose={onClose}>
       {onechain.map((t) => (
         <div key={t.id} className="connect-item" onClick={() => selectConnector(t)}>
-          <img src={t.icon} alt={t.name} />
+          <div style={{ width: 44, height: 44, borderRadius: 16, background: "#000" }}>
+            <img src={t.icon} alt={t.name} />
+          </div>
           <div className="connect-item-info">
             <span>{t.name}</span>
             {t.wallets[0]?.address && <span className="wallet-address">{formatter.truncateAddress(t.wallets[0].address)}</span>}

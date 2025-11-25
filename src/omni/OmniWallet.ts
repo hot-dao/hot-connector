@@ -2,10 +2,10 @@ import { sha256 } from "@noble/hashes/sha2.js";
 
 import { openAuthPopup } from "../ui/AuthPopup";
 import { OmniConnector } from "./OmniConnector";
+import IntentsBuilder from "./builder";
 import { Intents } from "./Intents";
 import { ReviewFee } from "./fee";
 import { Token } from "./token";
-import IntentsBuilder from "./builder";
 
 export interface AuthCommitment {
   tradingAddress: string;
