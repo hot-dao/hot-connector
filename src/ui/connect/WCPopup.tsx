@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import QRCode, { darkQR } from "../qrcode";
+import { QRCodeSVG } from "qrcode.react";
 import Popup, { present } from "../Popup";
+import styled from "styled-components";
 
 interface WalletConnectPopupProps {
   uri: string;
@@ -10,52 +11,11 @@ interface WalletConnectPopupProps {
 
 const WalletConnectPopupComponent: React.FC<WalletConnectPopupProps> = ({ uri: initialUri, onReject, onUpdateUriRef }) => {
   const [uri, setUri] = useState(initialUri);
-  const qrCodeRef = useRef<HTMLDivElement>(null);
   const [copyText, setCopyText] = useState("Copy Link");
-  const qrCodeInstanceRef = useRef<QRCode | null>(null);
 
   useEffect(() => {
     onUpdateUriRef?.(setUri);
   }, [onUpdateUriRef]);
-
-  useEffect(() => {
-    if (!uri || uri === "LOADING" || !qrCodeRef.current) return;
-
-    const size = 215;
-    const img = new Image();
-    img.src = "https://storage.herewallet.app/upload/2470b14a81fcf84e7cb53230311a7289b96a49ab880c7fa7a22765d7cdeb1271.svg";
-
-    // Clear previous QR code
-    if (qrCodeInstanceRef.current) {
-      qrCodeInstanceRef.current.stopAnimate();
-    }
-
-    if (qrCodeRef.current) {
-      qrCodeRef.current.innerHTML = "";
-    }
-
-    const qrcode = new QRCode({
-      ...darkQR,
-      size: size,
-      value: uri,
-      ecLevel: "H",
-      imageEcCover: 0.2,
-      logo: img,
-      fill: {
-        type: "linear-gradient",
-        position: [0, 0, 1, 1],
-        colorStops: [
-          [0, "#fff"],
-          [1, "#fff"],
-        ],
-      },
-    });
-
-    qrCodeInstanceRef.current = qrcode;
-    if (qrCodeRef.current) {
-      qrCodeRef.current.appendChild(qrcode.canvas);
-    }
-  }, [uri]);
 
   const handleCopy = async () => {
     if (uri && uri !== "LOADING") {
@@ -71,7 +31,7 @@ const WalletConnectPopupComponent: React.FC<WalletConnectPopupProps> = ({ uri: i
     <Popup onClose={onReject}>
       <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
         {uri && uri !== "LOADING" ? (
-          <div ref={qrCodeRef} className="qr-code" style={{ display: "flex", justifyContent: "center" }}></div>
+          <QRCodeSVG value={uri} size={200} />
         ) : (
           <div style={{ width: 215, height: 215, display: "flex", justifyContent: "center", alignItems: "center" }}>
             <p>Loading...</p>
@@ -107,9 +67,9 @@ export class WalletConnectPopup {
   }
 
   create() {
-    present<void>((resolvePopup, rejectPopup) => {
-      this.resolve = () => resolvePopup();
-      this.reject = () => rejectPopup(new Error("User rejected"));
+    present((close) => {
+      this.resolve = () => close();
+      this.reject = () => close();
 
       return (
         <WalletConnectPopupComponent
@@ -123,8 +83,6 @@ export class WalletConnectPopup {
           }}
         />
       );
-    }).catch(() => {
-      // Ignore errors from user rejection
     });
   }
 
@@ -139,3 +97,39 @@ export class WalletConnectPopup {
     this.reject?.();
   }
 }
+
+export const QrCode = styled.div`
+  background: url("https://app.hot-labs.org/assets/QR.svg") center center / cover no-repeat;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  width: 400px;
+  height: 400px;
+  flex-shrink: 0;
+
+  canvas {
+    transform: translate(1px, 22px);
+  }
+`;
+
+export const CopyButton = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s ease-in-out;
+  background: #282c30;
+  padding: 4px 8px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin: auto;
+  margin-top: -18px;
+
+  &:hover {
+    background: #383c40;
+  }
+`;

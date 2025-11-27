@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { OmniConnector, OmniConnectorOption } from "../../omni/OmniConnector";
+import { PopupOption, PopupOptionInfo } from "../styles";
 import Popup from "../Popup";
 
 const WalletPicker = ({ initialConnector, onClose }: { initialConnector: OmniConnector | null; onClose: () => void }) => {
@@ -22,9 +23,8 @@ const WalletPicker = ({ initialConnector, onClose }: { initialConnector: OmniCon
     return (
       <Popup header={<p>Select wallet</p>} onClose={onClose}>
         {connector.options.map((wallet) => (
-          <div
+          <PopupOption
             key={wallet.id}
-            className="connect-item"
             onClick={async () => {
               setWallet(wallet);
               await connector.connect(wallet.id);
@@ -32,10 +32,10 @@ const WalletPicker = ({ initialConnector, onClose }: { initialConnector: OmniCon
             }}
           >
             <img src={wallet.icon} style={{ background: "#000" }} />
-            <div className="connect-item-info">
+            <PopupOptionInfo className="connect-item-info">
               <p style={{ fontSize: 20, fontWeight: "bold" }}>{wallet.name}</p>
-            </div>
-          </div>
+            </PopupOptionInfo>
+          </PopupOption>
         ))}
       </Popup>
     );

@@ -3,6 +3,7 @@ import { makeObservable, observable, runInAction } from "mobx";
 import { EventEmitter } from "../events";
 import { LocalStorage } from "../storage";
 import { openLogoutPopup } from "../ui/router";
+import { HotConnector } from "../HotConnector";
 
 import { OmniWallet } from "./OmniWallet";
 import { WalletType } from "./config";
@@ -28,7 +29,7 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O extends
     disconnect: { wallet: T };
   }>();
 
-  constructor() {
+  constructor(readonly wibe3: HotConnector) {
     makeObservable(this, {
       wallets: observable,
       options: observable,
@@ -37,6 +38,7 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O extends
 
   abstract silentDisconnect(): Promise<void>;
   abstract connect(id?: string): Promise<void>;
+  abstract createWallet(address: string): Promise<OmniWallet>;
 
   abstract walletTypes: WalletType[];
   abstract type: ConnectorType;

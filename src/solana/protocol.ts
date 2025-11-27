@@ -4,9 +4,9 @@ import { base58 } from "@scure/base";
 
 export interface ISolanaProtocolWallet {
   address: string;
-  sendTransaction: (transaction: Transaction | VersionedTransaction, connection: Connection, options?: any) => Promise<string>;
-  signMessage: (message: string) => Promise<Uint8Array>;
-  disconnect: (data?: { silent?: boolean }) => Promise<void>;
+  sendTransaction?: (transaction: Transaction | VersionedTransaction, connection: Connection, options?: any) => Promise<string>;
+  signMessage?: (message: string) => Promise<Uint8Array>;
+  disconnect?: (data?: { silent?: boolean }) => Promise<void>;
 }
 
 class SolanaProtocolWallet implements ISolanaProtocolWallet {
@@ -41,9 +41,7 @@ class SolanaProtocolWallet implements ISolanaProtocolWallet {
     const account = await this.getAccount();
     const features = this.wallet.features as any;
 
-    const signAndSend = features["solana:signAndSendTransaction"]?.signAndSendTransaction as
-      | ((input: { account: WalletAccount; transaction: Transaction | VersionedTransaction }) => Promise<any>)
-      | undefined;
+    const signAndSend = features["solana:signAndSendTransaction"]?.signAndSendTransaction as ((input: { account: WalletAccount; transaction: Transaction | VersionedTransaction }) => Promise<any>) | undefined;
 
     if (signAndSend) {
       const result = await signAndSend({ account, transaction });
@@ -51,9 +49,7 @@ class SolanaProtocolWallet implements ISolanaProtocolWallet {
       return typeof signature === "string" ? signature : base58.encode(signature as Uint8Array);
     }
 
-    const signTx = features["solana:signTransaction"]?.signTransaction as
-      | ((input: { account: WalletAccount; transaction: Transaction | VersionedTransaction }) => Promise<any>)
-      | undefined;
+    const signTx = features["solana:signTransaction"]?.signTransaction as ((input: { account: WalletAccount; transaction: Transaction | VersionedTransaction }) => Promise<any>) | undefined;
 
     if (signTx) {
       const signed = await signTx({ account, transaction });
@@ -69,9 +65,7 @@ class SolanaProtocolWallet implements ISolanaProtocolWallet {
   async signMessage(message: string) {
     const account = await this.getAccount();
     const features = this.wallet.features as any;
-    const signMessageFeature = features["solana:signMessage"]?.signMessage as
-      | ((input: { account: WalletAccount; message: Uint8Array }) => Promise<any>)
-      | undefined;
+    const signMessageFeature = features["solana:signMessage"]?.signMessage as ((input: { account: WalletAccount; message: Uint8Array }) => Promise<any>) | undefined;
 
     if (!signMessageFeature) throw new Error("Wallet does not support solana:signMessage");
     const result = await signMessageFeature({ account, message: new TextEncoder().encode(message) });

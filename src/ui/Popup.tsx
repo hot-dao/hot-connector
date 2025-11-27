@@ -1,62 +1,58 @@
 import { createRoot } from "react-dom/client";
 import React, { useEffect, useRef } from "react";
+import { PopupRoot, ModalContainer, ModalContent, ModalHeader, ModalBody, Footer, GetWalletLink } from "./styles";
 
-import { css } from "./styles";
-
-export const present = <T,>(render: (resolve: (value: T) => void, reject: (reason?: any) => void) => React.ReactNode): Promise<T> => {
+export const present = (render: (close: () => void) => React.ReactNode) => {
   const div = document.createElement("div");
+  div.className = "wibe3-popup";
   document.body.appendChild(div);
   const root = createRoot(div);
-  const promise = new Promise<T>((resolve, reject) => {
-    root.render(render(resolve, reject));
-  });
 
-  return promise
-    .then((review) => {
+  root.render(
+    render(() => {
       root.unmount();
-      return review;
+      div.remove();
     })
-    .catch((e) => {
-      root.unmount();
-      throw e;
-    });
+  );
 };
 
-const Popup = ({ children, header, onClose }: { children: React.ReactNode; header?: React.ReactNode; onClose: () => void }) => {
-  const ref = useRef<HTMLDivElement>(null);
+const Popup = ({ widget, children, header, onClose }: { widget?: boolean; children: React.ReactNode; header?: React.ReactNode; onClose: () => void }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
+    if (widget) return;
     setTimeout(() => {
-      const modalContainer = ref.current?.querySelector(".modal-container");
-      if (modalContainer instanceof HTMLElement) {
-        modalContainer.style.opacity = "1";
-        modalContainer.style.transform = "translateY(0)";
+      if (containerRef.current) {
+        containerRef.current.style.opacity = "1";
+        containerRef.current.style.transform = "translateY(0)";
       }
 
-      const modalContent = ref.current?.querySelector(".modal-content");
-      if (modalContent instanceof HTMLElement) {
-        modalContent.style.opacity = "1";
-        modalContent.style.transform = "translateY(0)";
+      if (contentRef.current) {
+        contentRef.current.style.opacity = "1";
+        contentRef.current.style.transform = "translateY(0)";
       }
     }, 100);
   }, []);
 
+  if (widget) {
+    return <PopupRoot>{children}</PopupRoot>;
+  }
+
   return (
-    <div className="wibe3-popup" ref={ref}>
-      <style>{css(".wibe3-popup")}</style>
-      <div className="modal-container" onClick={onClose} style={{ opacity: 0, transition: "all 0.2s ease-in-out" }}>
-        <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ opacity: 0, transform: "translateY(20px)", transition: "all 0.2s ease-in-out" }}>
-          {header && <div className="modal-header">{header}</div>}
-          <div className="modal-body" style={{ overflowX: "hidden" }}>
-            {children}
-          </div>
-          <div className="footer">
+    <PopupRoot>
+      <ModalContainer ref={containerRef} onClick={onClose} style={{ opacity: 0, transition: "all 0.2s ease-in-out" }}>
+        <ModalContent ref={contentRef} onClick={(e) => e.stopPropagation()} style={{ opacity: 0, transform: "translateY(20px)", transition: "all 0.2s ease-in-out" }}>
+          {header && <ModalHeader>{header}</ModalHeader>}
+          <ModalBody style={{ overflowX: "hidden" }}>{children}</ModalBody>
+          <Footer>
             <img src="https://tgapp.herewallet.app/images/hot/hot-icon.png" alt="HOT Connector" />
             <p>HOT Connector</p>
-            <p className="get-wallet-link">Don't have a wallet?</p>
-          </div>
-        </div>
-      </div>
-    </div>
+            <GetWalletLink>Don't have a wallet?</GetWalletLink>
+          </Footer>
+        </ModalContent>
+      </ModalContainer>
+    </PopupRoot>
   );
 };
 

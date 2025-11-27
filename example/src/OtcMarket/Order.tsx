@@ -2,12 +2,12 @@ import styled from "styled-components";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 
-import { formatter } from "../../src/omni/token";
-import { omni } from "../../src";
+import { formatter } from "../wibe3/omni/token";
+import { omni } from "../wibe3";
+import { wibe3 } from "../engine";
+import { P } from "../uikit/text";
 
-import { P } from "./uikit/text";
 import otc, { OrderType } from "./otc";
-import { wibe3 } from "./wibe3";
 
 export const Order = ({ order, type }: { order: OrderType; type: "ask" | "bid" }) => {
   const [isSelected, setIsSelected] = useState(false);
@@ -25,9 +25,11 @@ export const Order = ({ order, type }: { order: OrderType; type: "ask" | "bid" }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isSelected, isLoading]);
 
-  const srcToken = omni.omni(order.params.src_token);
+  const srcToken = type === "ask" ? omni.omni(order.params.src_token) : omni.omni(order.params.dst_token);
   const amount = BigInt(order.maker_src_remaining);
-  const price = formatter.formatAmount(order.params.price, 12);
+
+  const floatPrice = formatter.formatAmount(order.params.price, 12);
+  const price = type === "ask" ? floatPrice : 1 / floatPrice;
 
   const handleBuy = async () => {
     try {
@@ -80,7 +82,7 @@ export const Order = ({ order, type }: { order: OrderType; type: "ask" | "bid" }
             autoFocus
             value={formatter.fromInput(valueAmount)}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder="Enter amount"
+            placeholder={type === "ask" ? "Enter USDT amount" : "Enter GONKA amount"}
           />
 
           <BuyButton onClick={handleBuy} type={type} disabled={isLoading}>

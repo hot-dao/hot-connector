@@ -1,9 +1,8 @@
 import uuid4 from "uuid4";
 import { makeObservable, observable, runInAction } from "mobx";
 
-import { formatter } from "../../src/omni/token";
-import { omni, OmniToken, OmniWallet } from "../../src";
-import { wibe3 } from "./wibe3";
+import { formatter } from "../wibe3/omni/token";
+import { omni, OmniToken, OmniWallet } from "../wibe3";
 
 export interface OrderType {
   closed: boolean;
@@ -62,7 +61,7 @@ class Otc {
           },
         }),
       })
-      .execute({ connector: wibe3 });
+      .execute();
 
     await this.fetchOrders();
   }
@@ -75,7 +74,7 @@ class Otc {
         msg: JSON.stringify(params),
         amount: amount,
       })
-      .execute({ connector: wibe3 });
+      .execute();
   }
 
   async fetchOrders() {

@@ -4,10 +4,9 @@ import { observer } from "mobx-react-lite";
 import { formatter, Token } from "../../omni/token";
 import { HotConnector } from "../../HotConnector";
 import { OmniWallet } from "../../omni/OmniWallet";
-import { Chains } from "../../omni/chains";
 import { OmniToken } from "../../omni/config";
 import { omni } from "../../omni/exchange";
-
+import { PopupOption } from "../styles";
 import TokenCard from "./TokenCard";
 import Popup from "../Popup";
 
@@ -20,20 +19,23 @@ interface SelectTokenPopupProps {
 
 export const SelectTokenPopup = ({ hot, initialChain, onClose, onSelect }: SelectTokenPopupProps) => {
   const [chain, setChain] = useState<number | null>(initialChain || null);
+  console.log({ chain });
 
   if (chain == null) {
     const chains = [...new Set(hot.tokens.map((token) => token.chain))];
     return (
       <Popup onClose={onClose} header={<p>Select chain</p>}>
-        {chains.map(
-          (chain) =>
-            !!Chains.get(chain).name && (
-              <div key={chain} className="connect-item" onClick={() => setChain(chain)}>
-                <img src={Chains.get(chain).icon} alt={Chains.get(chain).name} style={{ width: 24, height: 24, objectFit: "cover", borderRadius: "50%" }} />
-                <p style={{ fontSize: 24, fontWeight: "bold" }}>{Chains.get(chain).name}</p>
-              </div>
-            )
-        )}
+        {chains.map((chain) => {
+          const ft = hot.tokens.find((t) => t.chain === chain);
+          if (!ft) return;
+
+          return (
+            <PopupOption onClick={() => setChain(chain)}>
+              <img src={ft.chainIcon} alt={ft.chainName} style={{ width: 24, height: 24, objectFit: "cover", borderRadius: "50%" }} />
+              <p style={{ fontSize: 24, fontWeight: "bold" }}>{ft.chainName}</p>
+            </PopupOption>
+          );
+        })}
       </Popup>
     );
   }
@@ -51,33 +53,27 @@ export const SelectTokenPopup = ({ hot, initialChain, onClose, onSelect }: Selec
     );
   }
 
+  const omniWallets = hot.wallets.filter((t) => !!t.omniAddress);
   return (
     <Popup onClose={onClose} header={<p>Select token</p>}>
-      {hot.wallets.map(
-        (wallet, i) =>
-          !!wallet.omniAddress && (
-            <div key={wallet.address} style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8, marginTop: i > 0 ? 16 : 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, height: 32 }}>
-                <img src={wallet.icon} alt={wallet.icon} style={{ width: 24, height: 24, objectFit: "cover", borderRadius: "50%" }} />
-                <p style={{ marginTop: -4, fontSize: 20, fontWeight: "bold", color: "#c6c6c6" }}>{formatter.truncateAddress(wallet.address, 24)}</p>
-              </div>
+      {omniWallets.map((wallet, i) => (
+        <div key={wallet.address} style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8, marginTop: i > 0 ? 16 : 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, height: 32 }}>
+            <img src={wallet.icon} alt={wallet.icon} style={{ width: 24, height: 24, objectFit: "cover", borderRadius: "50%" }} />
+            <p style={{ marginTop: -4, fontSize: 20, fontWeight: "bold", color: "#c6c6c6" }}>{formatter.truncateAddress(wallet.address, 24)}</p>
+          </div>
 
-              <TokenCard token={omni.omni(OmniToken.USDT)} onSelect={onSelect} hot={hot} wallet={wallet} />
-              <TokenCard token={omni.omni(OmniToken.USDC)} onSelect={onSelect} hot={hot} wallet={wallet} />
-              <TokenCard token={omni.omni(OmniToken.JUNO)} onSelect={onSelect} hot={hot} wallet={wallet} />
-              <TokenCard token={omni.omni(OmniToken.NEAR)} onSelect={onSelect} hot={hot} wallet={wallet} />
-              <TokenCard token={omni.omni(OmniToken.ETH)} onSelect={onSelect} hot={hot} wallet={wallet} />
-            </div>
-          )
-      )}
+          {Object.values(OmniToken).map((token) => (
+            <TokenCard key={token} token={omni.omni(token)} onSelect={onSelect} hot={hot} wallet={wallet} />
+          ))}
+        </div>
+      ))}
 
-      {hot.wallets.length === 0 && (
+      {omniWallets.length === 0 && (
         <>
-          <TokenCard token={omni.omni(OmniToken.USDT)} onSelect={onSelect} hot={hot} />
-          <TokenCard token={omni.omni(OmniToken.USDC)} onSelect={onSelect} hot={hot} />
-          <TokenCard token={omni.omni(OmniToken.JUNO)} onSelect={onSelect} hot={hot} />
-          <TokenCard token={omni.omni(OmniToken.NEAR)} onSelect={onSelect} hot={hot} />
-          <TokenCard token={omni.omni(OmniToken.ETH)} onSelect={onSelect} hot={hot} />
+          {Object.values(OmniToken).map((token) => (
+            <TokenCard key={token} token={omni.omni(token)} onSelect={onSelect} hot={hot} />
+          ))}
         </>
       )}
     </Popup>

@@ -1,17 +1,16 @@
 import { base64, base58, hex } from "@scure/base";
-import { BrowserProvider, ethers, JsonRpcSigner, TransactionRequest } from "ethers";
+import { BrowserProvider, ethers, JsonRpcProvider, JsonRpcSigner, TransactionRequest } from "ethers";
 
 import { OmniConnector } from "../omni/OmniConnector";
 import { OmniWallet } from "../omni/OmniWallet";
 import { WalletType } from "../omni/config";
 import { ReviewFee } from "../omni/fee";
 import { Token } from "../omni/token";
-import Provider from "./Provider";
 import { erc20abi } from "./abi";
 
 interface EvmProvider {
   address: string;
-  request: (args: any) => Promise<any>;
+  request?: (args: any) => Promise<any>;
 }
 
 class EvmWallet extends OmniWallet {
@@ -22,10 +21,10 @@ class EvmWallet extends OmniWallet {
     super(connector);
   }
 
-  private rpcs: Record<number, Provider> = {};
+  private rpcs: Record<number, JsonRpcProvider> = {};
   rpc(chain: number) {
     if (this.rpcs[chain]) return this.rpcs[chain];
-    const rpc = new Provider(chain);
+    const rpc = new JsonRpcProvider(`https://api0.herewallet.app/api/v1/evm/rpc/${chain}`);
     this.rpcs[chain] = rpc;
     return rpc;
   }
@@ -40,7 +39,7 @@ class EvmWallet extends OmniWallet {
 
   async disconnect({ silent = false }: { silent?: boolean } = {}) {
     super.disconnect({ silent });
-    this.provider.request({ method: "wallet_revokePermissions" });
+    this.provider.request?.({ method: "wallet_revokePermissions" });
   }
 
   async fetchBalance(chain: number, address: string) {
@@ -70,6 +69,7 @@ class EvmWallet extends OmniWallet {
   }
 
   async signMessage(msg: string) {
+    if (!this.provider.request) throw "not impl";
     const result: string = await this.provider.request({ method: "personal_sign", params: [msg, this.address] });
     const yInt = parseInt(result.slice(-2), 16);
     const isZero = yInt === 27 || yInt === 0;
@@ -93,7 +93,8 @@ class EvmWallet extends OmniWallet {
   }
 
   async sendTransaction(chain: number, request: TransactionRequest): Promise<string> {
-    const provider = new BrowserProvider(this.provider);
+    if (!this.provider.request) throw "not impl";
+    const provider = new BrowserProvider(this.provider as any);
     const signer = new JsonRpcSigner(provider, this.address);
 
     await this.provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: `0x${chain.toString(16)}` }] });

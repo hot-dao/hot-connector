@@ -9,13 +9,11 @@ import { OmniWallet, SignedAuth } from "../omni/OmniWallet";
 import CosmosConnector from "./connector";
 
 interface ProtocolWallet {
-  disconnect: () => Promise<void>;
-  sendTransaction: (signDoc: any) => Promise<string>;
+  disconnect?: () => Promise<void>;
+  sendTransaction?: (signDoc: any) => Promise<string>;
   address: string;
-  publicKey: string;
+  publicKey?: string;
 }
-
-console.log({ OmniWallet });
 
 export default class CosmosWallet extends OmniWallet {
   readonly type = WalletType.COSMOS;
@@ -29,7 +27,7 @@ export default class CosmosWallet extends OmniWallet {
   }
 
   get publicKey() {
-    return this.wallet.publicKey;
+    return this.wallet.publicKey || "";
   }
 
   get omniAddress() {
@@ -38,10 +36,11 @@ export default class CosmosWallet extends OmniWallet {
 
   async disconnect({ silent = false }: { silent?: boolean } = {}) {
     super.disconnect({ silent });
-    this.wallet.disconnect();
+    this.wallet.disconnect?.();
   }
 
   sendTransaction(signDoc: any): Promise<string> {
+    if (!this.wallet.sendTransaction) throw "Not impl";
     return this.wallet.sendTransaction(signDoc);
   }
 
@@ -50,13 +49,7 @@ export default class CosmosWallet extends OmniWallet {
   }
 
   transfer(args: { chain: number; token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }): Promise<string> {
-    return this.wallet.sendTransaction({
-      bodyBytes: new Uint8Array(),
-      authInfoBytes: new Uint8Array(),
-      chainId: args.chain.toString(),
-      accountNumber: 12345,
-      sequence: 12345,
-    });
+    throw "Not impl";
   }
 
   signIntentsWithAuth(domain: string, intents?: Record<string, any>[]): Promise<SignedAuth> {
@@ -68,14 +61,12 @@ export default class CosmosWallet extends OmniWallet {
   }
 
   async fetchBalance(chain: number, token: string): Promise<bigint> {
-    const config = this.connector.getConfig(chainsMap[chain]);
+    const config = this.connector.getConfig(chainsMap[chain].id);
     if (!config) throw new Error("Config not found");
     const client = await StargateClient.connect(config.rpc);
 
     const address = toBech32(config.prefix, fromBech32(this.address).data);
     const balance = await client.getBalance(address, token);
-
-    console.log({ chain, balance, address, token });
     return BigInt(balance.amount || 0);
   }
 }

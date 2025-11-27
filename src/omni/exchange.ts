@@ -2,13 +2,14 @@ import { GetExecutionStatusResponse, OneClickService, OpenAPI, QuoteRequest, Quo
 import { Asset, Networks } from "@stellar/stellar-sdk";
 import { makeObservable, observable } from "mobx";
 
+import NearWallet from "../near/wallet";
 import CosmosWallet from "../cosmos/wallet";
 import { bridge, Network, OmniToken, WalletType } from "./config";
 import { OmniWallet } from "./OmniWallet";
 import { defaultTokens } from "./list";
 import { ReviewFee } from "./fee";
 import { Token } from "./token";
-import NearWallet from "../near/wallet";
+import { utils } from "@hot-labs/omni-sdk";
 
 OpenAPI.BASE = "https://1click.chaindefuser.com";
 OpenAPI.TOKEN = "";
@@ -37,6 +38,17 @@ export type BridgeReview = {
   status: "pending" | "success" | "failed";
   statusMessage: string | null;
 };
+
+interface BridgeRequest {
+  refund: OmniWallet;
+  sender: OmniWallet | "qr";
+  from: Token;
+  to: Token;
+  amount: bigint;
+  receiver: string;
+  slippage: number;
+  type?: "exactIn" | "exactOut";
+}
 
 class Omni {
   public tokens = defaultTokens.flatMap((t: any) => [new Token(t), new Token({ ...t, omni: true })]);
@@ -86,8 +98,6 @@ class Omni {
     const { sender, token, amount, receiver, onMessage } = args;
     onMessage("Sending deposit transaction");
 
-    console.log(args);
-
     if (token.type === WalletType.COSMOS && sender instanceof CosmosWallet) {
       const cosmosBridge = await bridge.cosmos();
       const hash = await cosmosBridge.deposit({
@@ -120,8 +130,8 @@ class Omni {
     throw new Error("Unsupported token");
   }
 
-  async withdraw(args: { sender: OmniWallet; token: Token; amount: bigint; receiver: string; onMessage: (message: string) => void }) {
-    const { sender, token, amount, receiver, onMessage } = args;
+  async withdraw(args: { sender: OmniWallet; token: Token; amount: bigint; receiver: string }) {
+    const { sender, token, amount, receiver } = args;
     await bridge.withdrawToken({
       signIntents: async (intents: any) => sender.signIntents(intents),
       intentAccount: sender.omniAddress,
@@ -140,8 +150,31 @@ class Omni {
     return this.tokens;
   }
 
-  async reviewSwap(request: { sender: OmniWallet; from: Token; to: Token; amount: bigint; receiver: string; slippage: number; type?: "exactIn" | "exactOut" }): Promise<BridgeReview> {
-    const { sender, from, to, amount, receiver, slippage, type } = request;
+  async withdrawFee(request: BridgeRequest) {
+    if (request.to.chain === Network.Near || request.to.chain === Network.Hot) return 0n;
+    const gaslessFee = await bridge.getGaslessWithdrawFee({ chain: request.to.chain, token: request.to.address, receiver: request.receiver }).catch(() => null);
+    if (!gaslessFee) throw "Failed to withdraw with gasless";
+
+    if (gaslessFee.gasPrice === 0n) return 0n;
+    if (request.to.address === "native") return 0n;
+
+    // if withdraw token is not native, we need to swap a bit of it to native to cover the withdraw fee
+    const swap = await bridge
+      .buildSwapExectOutIntent({
+        intentAccount: request.receiver,
+        intentFrom: utils.toOmniIntent(request.to.chain, request.to.address),
+        intentTo: utils.toOmniIntent(request.to.chain, "native"),
+        amountOut: gaslessFee.gasPrice,
+      })
+      .catch(() => null);
+
+    // if swap is successful and the amount out is greater than the amount in, we need to subtract the amount in from the amount out
+    if (swap) return BigInt(swap.amount_in);
+    throw "Failed to withdraw with gasless";
+  }
+
+  async reviewSwap(request: BridgeRequest): Promise<BridgeReview> {
+    const { sender, refund, from, to, amount, receiver, slippage, type } = request;
     const intentFrom = await this.getToken(from.chain, from.address);
     const intentTo = await this.getToken(to.chain, to.address);
 
@@ -153,7 +186,7 @@ class Omni {
     const deadline = new Date(Date.now() + deadlineTime).toISOString();
     const noFee = from.symbol === to.symbol;
 
-    if (directChains.includes(from.chain) && to.chain === Network.Hot && from.omniAddress === to.omniAddress) {
+    if (sender !== "qr" && directChains.includes(from.chain) && to.chain === Network.Hot && from.omniAddress === to.omniAddress) {
       const fee = await bridge.getDepositFee({
         amount: amount,
         token: from.address,
@@ -176,19 +209,28 @@ class Omni {
       };
     }
 
-    if (directChains.includes(to.chain) && from.chain === Network.Hot && from.omniAddress === to.omniAddress) {
+    if (sender !== "qr" && directChains.includes(to.chain) && from.chain === Network.Hot && from.omniAddress === to.omniAddress) {
+      const fee = await this.withdrawFee(request);
+      if (fee >= amount) throw "Withdraw fee is greater than amount";
       return {
         from: from,
         to: to,
         amountIn: amount,
         fee: new ReviewFee({ chain: -4 }),
-        amountOut: amount,
+        amountOut: amount - fee,
         slippage: slippage,
         receiver: receiver,
         statusMessage: null,
         status: "pending",
         qoute: "withdraw",
       };
+    }
+
+    const refundParams = { refundType: QuoteRequest.refundType.ORIGIN_CHAIN, refundTo: refund.address };
+    if (refund.type !== from.type) {
+      if (!refund.omniAddress) throw "Setup refund address";
+      refundParams.refundType = QuoteRequest.refundType.INTENTS;
+      refundParams.refundTo = refund.omniAddress;
     }
 
     const qoute = await OneClickService.getQuote({
@@ -199,21 +241,20 @@ class Omni {
       depositType: from.chain === Network.Hot ? QuoteRequest.depositType.INTENTS : QuoteRequest.depositType.ORIGIN_CHAIN,
       depositMode: from.chain === Network.Stellar ? QuoteRequest.depositMode.MEMO : QuoteRequest.depositMode.SIMPLE,
       recipientType: to.chain === Network.Hot ? QuoteRequest.recipientType.INTENTS : QuoteRequest.recipientType.DESTINATION_CHAIN,
-      refundType: QuoteRequest.refundType.ORIGIN_CHAIN, // : QuoteRequest.refundType.INTENTS,
-      refundTo: sender.address,
       appFees: noFee ? [] : [{ recipient: "intents.tg", fee: 25 }],
       amount: request.amount.toString(),
       referral: "intents.tg",
       recipient: request.receiver,
       deadline: deadline,
+      ...refundParams,
       dry: false,
     });
 
     let fee = new ReviewFee({ baseFee: 0n, gasLimit: 0n, chain: -4 });
-    if (request.from.chain !== Network.Hot) {
+    if (request.from.chain !== Network.Hot && sender !== "qr") {
       const amount = BigInt(qoute.quote.amountIn);
       const depositAddress = qoute.quote.depositAddress!;
-      fee = await request.sender.transferFee(request.from, depositAddress, amount);
+      fee = await sender.transferFee(request.from, depositAddress, amount);
     }
 
     return {
@@ -232,12 +273,16 @@ class Omni {
 
   async makeSwap(sender: OmniWallet, review: BridgeReview, pending: { log: (message: string) => void }) {
     if (review.qoute === "withdraw") {
-      await this.withdraw({ sender, token: review.to, amount: review.amountIn, receiver: review.receiver, onMessage: pending.log });
+      await this.withdraw({ sender, token: review.to, amount: review.amountIn, receiver: review.receiver });
+      sender.connector.wibe3.fetchToken(review.from);
+      sender.connector.wibe3.fetchToken(review.to);
       return review;
     }
 
     if (review.qoute === "deposit") {
       await this.deposit({ sender, token: review.from, amount: review.amountIn, receiver: review.receiver, onMessage: pending.log });
+      sender.connector.wibe3.fetchToken(review.from);
+      sender.connector.wibe3.fetchToken(review.to);
       return review;
     }
 
@@ -251,10 +296,13 @@ class Omni {
     });
 
     pending.log("Submitting tx");
+    sender.connector.wibe3.fetchToken(review.from);
     await OneClickService.submitDepositTx({ txHash: hash, depositAddress }).catch(() => {});
 
     pending.log("Checking status");
-    return await this.processing(review);
+    const result = await this.processing(review);
+    sender.connector.wibe3.fetchToken(review.to);
+    return result;
   }
 
   getMessage(status: GetExecutionStatusResponse.status): string | null {

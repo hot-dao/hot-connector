@@ -9,6 +9,8 @@ import { isInjected } from "../hot-wallet/hot";
 import SolanaProtocolWallet from "./protocol";
 import { getWallets } from "./wallets";
 import SolanaWallet from "./wallet";
+import { HotConnector } from "../HotConnector";
+import { OmniWallet } from "../omni/OmniWallet";
 
 export interface SolanaConnectorOptions {
   projectId?: string;
@@ -31,8 +33,8 @@ class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet; name
 
   provider?: Promise<UniversalProvider>;
 
-  constructor(options?: SolanaConnectorOptions) {
-    super();
+  constructor(wibe3: HotConnector, options?: SolanaConnectorOptions) {
+    super(wibe3);
 
     wallets.get().forEach((t) => {
       if (this.options.find((w) => w.name === t.name)) return;
@@ -69,6 +71,10 @@ class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet; name
     wallets.on("unregister", (wallet) => {
       this.options = this.options.filter((w) => w.id !== wallet.name);
     });
+  }
+
+  async createWallet(address: string): Promise<OmniWallet> {
+    return new SolanaWallet(this, { address });
   }
 
   async getConnectedWallet() {

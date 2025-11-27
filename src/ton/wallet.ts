@@ -11,8 +11,8 @@ import { ReviewFee } from "../omni/fee";
 import { Token } from "../omni/token";
 
 interface ProtocolWallet {
-  sendTransaction: (params: SendTransactionRequest) => Promise<any>;
-  signData: (params: SignDataPayload) => Promise<SignDataResponse>;
+  sendTransaction?: (params: SendTransactionRequest) => Promise<any>;
+  signData?: (params: SignDataPayload) => Promise<SignDataResponse>;
   account: { address: string; publicKey?: string };
 }
 
@@ -70,6 +70,7 @@ class TonWallet extends OmniWallet {
   }
 
   async sendTransaction(msgs: SenderArguments[]) {
+    if (!this.wallet.sendTransaction) throw "Not impl";
     const response = await tonApi.blockchain.getBlockchainAccountTransactions(Address.parse(this.address), { limit: 1 });
     const { seqno } = await tonApi.wallet.getAccountSeqno(Address.parse(this.address));
     const lastTransaction = response.transactions[0];
@@ -136,6 +137,7 @@ class TonWallet extends OmniWallet {
   }
 
   async signIntents(intents: Record<string, any>[], options?: { deadline?: number; nonce?: Uint8Array }) {
+    if (!this.wallet.signData) throw "Not impl";
     const nonce = new Uint8Array(options?.nonce || window.crypto.getRandomValues(new Uint8Array(32)));
     const message = {
       deadline: new Date(Date.now() + 24 * 3_600_000 * 365).toISOString(),

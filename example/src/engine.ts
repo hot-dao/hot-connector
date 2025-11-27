@@ -1,4 +1,4 @@
-import { HotConnector } from "../../src/HotConnector";
+import { HotConnector } from "./wibe3/HotConnector";
 
 export const wibe3 = new HotConnector({
   projectId: "1292473190ce7eb75c9de67e15aaad99",

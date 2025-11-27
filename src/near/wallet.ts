@@ -1,4 +1,4 @@
-import { NearWalletBase, SignAndSendTransactionsParams, SignMessageParams, SignedMessage, SignAndSendTransactionParams } from "@hot-labs/near-connect";
+import { NearWalletBase, SignMessageParams, SignedMessage, SignAndSendTransactionParams } from "@hot-labs/near-connect";
 import { base64, base58, hex } from "@scure/base";
 import { Action } from "@near-js/transactions";
 
@@ -12,7 +12,7 @@ import { rpc, TGAS } from "./rpc";
 export default class NearWallet extends OmniWallet {
   readonly type = WalletType.NEAR;
 
-  constructor(readonly connector: OmniConnector, readonly address: string, readonly publicKey: string, readonly wallet: NearWalletBase) {
+  constructor(readonly connector: OmniConnector, readonly address: string, readonly publicKey?: string, readonly wallet?: NearWalletBase) {
     super(connector);
   }
 
@@ -20,16 +20,12 @@ export default class NearWallet extends OmniWallet {
     return this.address;
   }
 
-  get manifest() {
-    return this.wallet.manifest;
-  }
-
   async onDisconnect() {
-    await this.wallet.signOut();
+    await this.wallet?.signOut();
   }
 
   async sendTransaction(params: SignAndSendTransactionParams): Promise<string> {
-    console.log(params);
+    if (!this.wallet) throw "not impl";
     const actions = (params.actions as any).map((action: Action) => {
       if ((action as any)["type"]) return action;
       if (action.functionCall) {
@@ -47,9 +43,7 @@ export default class NearWallet extends OmniWallet {
       if (action.transfer) {
         return {
           type: "Transfer",
-          params: {
-            deposit: String(action.transfer.deposit),
-          },
+          params: { deposit: String(action.transfer.deposit) },
         };
       }
     });
@@ -59,6 +53,7 @@ export default class NearWallet extends OmniWallet {
   }
 
   async signMessage(params: SignMessageParams): Promise<SignedMessage> {
+    if (!this.wallet) throw "not impl";
     return this.wallet.signMessage(params);
   }
 
@@ -188,6 +183,7 @@ export default class NearWallet extends OmniWallet {
   }
 
   async signIntentsWithAuth(domain: string, intents?: Record<string, any>[]) {
+    if (!this.wallet) throw "not impl";
     const accounts = await this.wallet.getAccounts();
     if (accounts.length === 0) throw new Error("No account found");
     const { accountId, publicKey } = accounts[0];
@@ -207,8 +203,9 @@ export default class NearWallet extends OmniWallet {
   }
 
   async signIntents(intents: Record<string, any>[], options?: { nonce?: Uint8Array; deadline?: number }): Promise<Record<string, any>> {
-    const nonce = new Uint8Array(options?.nonce || window.crypto.getRandomValues(new Uint8Array(32)));
+    if (!this.wallet) throw "not impl";
 
+    const nonce = new Uint8Array(options?.nonce || window.crypto.getRandomValues(new Uint8Array(32)));
     const message = JSON.stringify({
       deadline: options?.deadline ? new Date(options.deadline).toISOString() : "2100-01-01T00:00:00.000Z",
       signer_id: this.omniAddress,

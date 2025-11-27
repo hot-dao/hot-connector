@@ -2,6 +2,7 @@ import { TonConnectUI, TonConnect } from "@tonconnect/ui";
 import { runInAction } from "mobx";
 
 import { WalletType } from "../omni/config";
+import { HotConnector } from "../HotConnector";
 import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
 import { isInjected } from "../hot-wallet/hot";
 import TonWallet from "./wallet";
@@ -20,8 +21,8 @@ class TonConnector extends OmniConnector<TonWallet> {
   name = "TON Wallet";
   id = "ton";
 
-  constructor(args?: TonConnectorOptions) {
-    super();
+  constructor(wibe3: HotConnector, args?: TonConnectorOptions) {
+    super(wibe3);
 
     if (typeof window !== "undefined") {
       this.tonConnect =
@@ -49,6 +50,12 @@ class TonConnector extends OmniConnector<TonWallet> {
         runInAction(() => (this.options = wallets.map((w) => ({ name: w.name, icon: w.imageUrl, id: w.appName }))));
       });
 
+      const tcRoot = document.querySelector("#tc-widget-root");
+      if (tcRoot instanceof HTMLElement) {
+        tcRoot.style.zIndex = "100000";
+        tcRoot.style.position = "fixed";
+      }
+
       if (isInjected()) {
         this.tonConnect.getWallets().then((wallets) => {
           const wallet = wallets.find((w) => w.appName === "hot");
@@ -56,6 +63,10 @@ class TonConnector extends OmniConnector<TonWallet> {
         });
       }
     }
+  }
+
+  async createWallet(address: string) {
+    return new TonWallet(this, { account: { address } });
   }
 
   async connect(id: string) {

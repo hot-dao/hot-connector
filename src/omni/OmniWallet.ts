@@ -26,7 +26,7 @@ export interface SignedAuth {
 }
 
 export abstract class OmniWallet {
-  constructor(readonly connector?: OmniConnector) {}
+  constructor(readonly connector: OmniConnector) {}
 
   abstract address: string;
   abstract publicKey?: string;

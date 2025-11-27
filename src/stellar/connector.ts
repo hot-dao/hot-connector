@@ -2,10 +2,11 @@ import { sep43Modules, HotWalletModule, StellarWalletsKit, WalletNetwork, ISuppo
 import { Transaction } from "@stellar/stellar-base";
 
 import { WalletType } from "../omni/config";
-
+import { HotConnector } from "../HotConnector";
 import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
 import { isInjected } from "../hot-wallet/hot";
 import StellarWallet from "./wallet";
+import { OmniWallet } from "../omni/OmniWallet";
 
 type StellarOption = ISupportedWallet & { name: string; icon: string; uuid: string; rdns: string };
 class StellarConnector extends OmniConnector<StellarWallet, StellarOption> {
@@ -17,8 +18,8 @@ class StellarConnector extends OmniConnector<StellarWallet, StellarOption> {
   name = "Stellar Wallet";
   id = "stellar";
 
-  constructor(stellarKit?: StellarWalletsKit) {
-    super();
+  constructor(wibe3: HotConnector, stellarKit?: StellarWalletsKit) {
+    super(wibe3);
 
     this.stellarKit = stellarKit || new StellarWalletsKit({ network: WalletNetwork.PUBLIC, modules: isInjected() ? [new HotWalletModule()] : sep43Modules() });
     this.stellarKit.getSupportedWallets().then((wallets) => {
@@ -35,6 +36,10 @@ class StellarConnector extends OmniConnector<StellarWallet, StellarOption> {
       const signTransaction = async (transaction: Transaction) => this.stellarKit.signTransaction(transaction.toXDR());
       this.setWallet(new StellarWallet(this, { address: data.address!, signMessage, signTransaction }));
     });
+  }
+
+  async createWallet(address: string): Promise<OmniWallet> {
+    return new StellarWallet(this, { address });
   }
 
   async getConnectedWallet() {

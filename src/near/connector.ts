@@ -4,6 +4,8 @@ import { runInAction } from "mobx";
 import { WalletType } from "../omni/config";
 import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
 import NearWallet from "./wallet";
+import { HotConnector } from "../HotConnector";
+import { OmniWallet } from "../omni/OmniWallet";
 
 export interface NearConnectorOptions {
   connector?: NearConnector;
@@ -24,8 +26,8 @@ class Connector extends OmniConnector<NearWallet> {
   name = "NEAR Wallet";
   id = "near";
 
-  constructor(options?: NearConnectorOptions) {
-    super();
+  constructor(readonly wibe3: HotConnector, options?: NearConnectorOptions) {
+    super(wibe3);
 
     this.connector =
       options?.connector ||
@@ -54,6 +56,10 @@ class Connector extends OmniConnector<NearWallet> {
         }));
       });
     });
+  }
+
+  async createWallet(address: string): Promise<OmniWallet> {
+    return new NearWallet(this, address, "");
   }
 
   async connect(id: string) {

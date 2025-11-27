@@ -25,15 +25,14 @@ import SolanaWallet from "./solana/wallet";
 import StellarWallet from "./stellar/wallet";
 import TonWallet from "./ton/wallet";
 import CosmosWallet from "./cosmos/wallet";
-import IntentsBuilder from "./omni/builder";
 
-export const near = (options?: NearConnectorOptions) => new NearConnector(options);
-export const evm = (options?: EvmConnectorOptions) => new EvmConnector(options);
-export const solana = (options?: SolanaConnectorOptions) => new SolanaConnector(options);
-export const stellar = () => new StellarConnector();
-export const cosmos = (options?: CosmosConnectorOptions) => new CosmosConnector(options);
-export const ton = (options?: TonConnectorOptions) => new TonConnector(options);
-export const google = () => new GoogleConnector();
+export const near = (options?: NearConnectorOptions) => (wibe3: HotConnector) => new NearConnector(wibe3, options);
+export const evm = (options?: EvmConnectorOptions) => (wibe3: HotConnector) => new EvmConnector(wibe3, options);
+export const solana = (options?: SolanaConnectorOptions) => (wibe3: HotConnector) => new SolanaConnector(wibe3, options);
+export const cosmos = (options?: CosmosConnectorOptions) => (wibe3: HotConnector) => new CosmosConnector(wibe3, options);
+export const ton = (options?: TonConnectorOptions) => (wibe3: HotConnector) => new TonConnector(wibe3, options);
+export const stellar = () => (wibe3: HotConnector) => new StellarConnector(wibe3);
+export const google = () => (wibe3: HotConnector) => new GoogleConnector(wibe3);
 
 interface HotConnectorOptions extends EvmConnectorOptions, SolanaConnectorOptions, TonConnectorOptions, NearConnectorOptions {
   webWallet?: string;
@@ -64,7 +63,7 @@ export class HotConnector {
       cosmos: computed,
     });
 
-    this.connectors = [google(), near(), evm(options), solana(options), stellar(), ton(options), cosmos()];
+    this.connectors = [google(), near(), evm(options), solana(options), stellar(), ton(options), cosmos()].map((t) => t(this));
     GlobalSettings.webWallet = options?.webWallet ?? GlobalSettings.webWallet;
     GlobalSettings.tonApi = options?.tonApi ?? GlobalSettings.tonApi;
 
@@ -73,7 +72,11 @@ export class HotConnector {
       t.onDisconnect((payload) => this.events.emit("disconnect", payload));
     });
 
-    this.onConnect((payload) => this.fetchTokens(payload.wallet));
+    this.onConnect((payload) => {
+      this.fetchTokens(payload.wallet);
+      this.fetchOmniTokens(payload.wallet);
+    });
+
     this.onDisconnect(({ wallet }) => {
       if (!wallet) return;
       runInAction(() => (this.balances[`${wallet.type}:${wallet.address}`] = {}));
@@ -82,6 +85,16 @@ export class HotConnector {
 
   getWalletConnector(type: WalletType): OmniConnector | null {
     return this.connectors.find((t) => t.type === ConnectorType.WALLET && t.walletTypes.includes(type)) ?? null;
+  }
+
+  get priorityWallet() {
+    if (this.near) return this.near;
+    if (this.evm) return this.evm;
+    if (this.solana) return this.solana;
+    if (this.ton) return this.ton;
+    if (this.stellar) return this.stellar;
+    if (this.cosmos) return this.cosmos;
+    return null;
   }
 
   get wallets(): OmniWallet[] {
@@ -121,24 +134,40 @@ export class HotConnector {
     return this.balances[`${wallet.type}:${wallet.address}`][token.id] ?? 0n;
   }
 
+  async fetchToken(token: Token, forceWallets?: OmniWallet[]) {
+    const wallets = forceWallets || (token.type === WalletType.OMNI ? this.wallets : this.wallets.filter((t) => t.type === token.type));
+
+    if (wallets.length === 1) {
+      const wallet = wallets[0];
+      const key = `${wallet.type}:${wallet.address}`;
+      if (token.type !== wallet.type) return;
+      if (token.type === WalletType.OMNI) return;
+      const balance = await wallet.fetchBalance(token.chain, token.address);
+      runInAction(() => (this.balances[key][token.id] = balance));
+      return;
+    }
+
+    await Promise.all(wallets.map((t) => this.fetchToken(token, [t])));
+  }
+
+  async fetchOmniTokens(wallet: OmniWallet) {
+    const key = `${wallet.type}:${wallet.address}`;
+    const assets = await wallet.getAssets();
+    runInAction(() => {
+      Object.keys(assets).forEach((id) => {
+        this.balances[key][`-4:${id}`] = assets[id];
+      });
+    });
+  }
+
   async fetchTokens(wallet: OmniWallet) {
     const key = `${wallet.type}:${wallet.address}`;
     if (!this.balances[key]) this.balances[key] = {};
-
     this.tokens.forEach(async (token) => {
       if (token.type !== wallet.type) return;
       if (token.type === WalletType.OMNI) return;
       const balance = await wallet.fetchBalance(token.chain, token.address);
       runInAction(() => (this.balances[key][token.id] = balance));
-    });
-
-    wallet.getAssets().then((assets) => {
-      runInAction(() => {
-        console.log({ assets });
-        Object.keys(assets).forEach((id) => {
-          this.balances[key][`-4:${id}`] = assets[id];
-        });
-      });
     });
   }
 
@@ -158,17 +187,20 @@ export class HotConnector {
     return () => this.events.off("disconnect", handler);
   }
 
-  async withdraw(token: OmniToken, amount: number) {
+  async withdraw(token: OmniToken, amount: number, settings?: { title?: string; sender?: OmniWallet }) {
     const omniToken = this.tokens.find((t) => t.address === token)!;
     const originalToken = this.tokens.find((t) => t.chain === omniToken.originalChain && t.address === omniToken.originalAddress)!;
 
-    const sender = this.wallets.sort((a, b) => {
-      const aBalance = omniToken.float(this.balance(a, omniToken));
-      const bBalance = omniToken.float(this.balance(b, omniToken));
-      return bBalance - aBalance;
-    })[0];
+    const sender =
+      settings?.sender ||
+      this.wallets.sort((a, b) => {
+        const aBalance = omniToken.float(this.balance(a, omniToken));
+        const bBalance = omniToken.float(this.balance(b, omniToken));
+        return bBalance - aBalance;
+      })[0];
 
-    await openBridge(this, {
+    return openBridge(this, {
+      title: settings?.title,
       sender: sender,
       receipient: this.wallets.find((w) => w.type === originalToken.type) as OmniWallet,
       to: originalToken,
@@ -177,13 +209,17 @@ export class HotConnector {
     });
   }
 
-  async deposit(token: OmniToken, amount: number) {
+  async deposit(token: OmniToken, amount: number, settings?: { title?: string }) {
     const omni = this.tokens.find((t) => t.address === token)!;
     const orig = this.tokens.find((t) => t.chain === omni.originalChain && t.address === omni.originalAddress)!;
     const sender = this.wallets.find((t) => t.type === orig.type)!;
 
     return openBridge(this, {
       sender: sender,
+      type: "exactOut",
+      readonlyAmount: true,
+      readonlyTo: true,
+      title: settings?.title,
       receipient: this.wallets.find((w) => !!w.omniAddress) as OmniWallet,
       amount: amount,
       from: orig,

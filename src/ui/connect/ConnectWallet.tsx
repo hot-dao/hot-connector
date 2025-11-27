@@ -5,6 +5,7 @@ import { HotConnector } from "../../HotConnector";
 import { ConnectorType, OmniConnector } from "../../omni/OmniConnector";
 import { formatter } from "../../omni/token";
 
+import { PopupOption, PopupOptionInfo } from "../styles";
 import { openWalletPicker } from "../router";
 import { LogoutIcon } from "../icons/logout";
 import Popup from "../Popup";
@@ -27,16 +28,16 @@ const Connector: React.FC<MultichainPopupProps> = ({ hot, onClose }) => {
   return (
     <Popup header={<p>Select network</p>} onClose={onClose}>
       {onechain.map((t) => (
-        <div key={t.id} className="connect-item" onClick={() => selectConnector(t)}>
+        <PopupOption key={t.id} onClick={() => selectConnector(t)}>
           <div style={{ width: 44, height: 44, borderRadius: 16, background: "#000" }}>
             <img src={t.icon} alt={t.name} />
           </div>
-          <div className="connect-item-info">
+          <PopupOptionInfo>
             <span>{t.name}</span>
             {t.wallets[0]?.address && <span className="wallet-address">{formatter.truncateAddress(t.wallets[0].address, 24)}</span>}
-          </div>
+          </PopupOptionInfo>
           {t.wallets[0]?.address && <LogoutIcon />}
-        </div>
+        </PopupOption>
       ))}
 
       {social.length > 0 && (
@@ -48,14 +49,14 @@ const Connector: React.FC<MultichainPopupProps> = ({ hot, onClose }) => {
           </div>
 
           {social.map((t) => (
-            <div key={t.id} className="connect-item" onClick={() => selectConnector(t)}>
+            <PopupOption key={t.id} onClick={() => selectConnector(t)}>
               <img src={t.icon} alt={t.name} />
-              <div className="connect-item-info">
+              <PopupOptionInfo>
                 <span>{t.name}</span>
                 {t.wallets[0]?.address && <span className="wallet-address">Multichain connected</span>}
-              </div>
+              </PopupOptionInfo>
               {t.wallets[0]?.address && <LogoutIcon />}
-            </div>
+            </PopupOption>
           ))}
         </>
       )}

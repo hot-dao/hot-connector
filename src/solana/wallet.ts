@@ -18,7 +18,6 @@ import { OmniConnector } from "../omni/OmniConnector";
 import { OmniWallet } from "../omni/OmniWallet";
 
 import { formatter, Token } from "../omni/token";
-import { Chains } from "../omni/chains";
 import { ReviewFee } from "../omni/fee";
 
 import { ISolanaProtocolWallet } from "./protocol";
@@ -56,7 +55,7 @@ class SolanaWallet extends OmniWallet {
   }
 
   async disconnect(data?: { silent?: boolean }) {
-    await this.wallet.disconnect(data);
+    await this.wallet.disconnect?.(data);
     super.disconnect(data);
   }
 
@@ -100,10 +99,7 @@ class SolanaWallet extends OmniWallet {
     const tokenFrom = getAssociatedTokenAddressSync(mint, owner, false, tokenProgramId);
     const tokenTo = getAssociatedTokenAddressSync(mint, destination, false, tokenProgramId);
 
-    const instructions: TransactionInstruction[] = [
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: Number(fee.baseFee) }),
-      ComputeBudgetProgram.setComputeUnitLimit({ units: Number(fee.gasLimit) }),
-    ];
+    const instructions: TransactionInstruction[] = [ComputeBudgetProgram.setComputeUnitPrice({ microLamports: Number(fee.baseFee) }), ComputeBudgetProgram.setComputeUnitLimit({ units: Number(fee.gasLimit) })];
 
     const isRegistered = await getAccount(connection, tokenTo, "confirmed", tokenProgramId).catch(() => null);
     if (isRegistered == null) {
@@ -159,28 +155,17 @@ class SolanaWallet extends OmniWallet {
   }
 
   async getPriorityFeeEstimate(params: any): Promise<any> {
-    let err;
+    const response = await fetch("https://api0.herewallet.app/api/v1/evm/helius/staked", {
+      body: JSON.stringify({ jsonrpc: "2.0", id: "helius-sdk", method: "getPriorityFeeEstimate", params: [params] }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
 
-    const chain = await Chains.getChain(Network.Solana);
-    for (const rpc of chain.submitter || []) {
-      try {
-        const response = await fetch(rpc, {
-          body: JSON.stringify({ jsonrpc: "2.0", id: "helius-sdk", method: "getPriorityFeeEstimate", params: [params] }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        });
-
-        if (!response.ok) throw "Server error";
-        const { result, error } = await response.json();
-        if (error) throw error.message;
-        if (result.error) throw result.error.message;
-        return result;
-      } catch (error) {
-        err = error;
-      }
-    }
-
-    throw new Error(`Error fetching priority fee estimate: ${err}`);
+    if (!response.ok) throw "Server error";
+    const { result, error } = await response.json();
+    if (error) throw error.message;
+    if (result.error) throw result.error.message;
+    return result;
   }
 
   async transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee: ReviewFee }): Promise<string> {
@@ -189,6 +174,7 @@ class SolanaWallet extends OmniWallet {
   }
 
   async sendTransaction(instructions: TransactionInstruction[]): Promise<string> {
+    if (!this.wallet.sendTransaction) throw "not impl";
     const { blockhash } = await connection.getLatestBlockhash();
     const message = new TransactionMessage({ payerKey: new PublicKey(this.address), recentBlockhash: blockhash, instructions });
     const transaction = new VersionedTransaction(message.compileToV0Message());
@@ -196,6 +182,7 @@ class SolanaWallet extends OmniWallet {
   }
 
   async signMessage(message: string) {
+    if (!this.wallet.signMessage) throw "not impl";
     return this.wallet.signMessage(message);
   }
 

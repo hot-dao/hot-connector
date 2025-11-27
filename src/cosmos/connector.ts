@@ -4,8 +4,10 @@ import { StargateClient } from "@cosmjs/stargate";
 import { hex } from "@scure/base";
 
 import { WalletType } from "../omni/config";
+import { HotConnector } from "../HotConnector";
 import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
 import CosmosWallet from "./wallet";
+import { OmniWallet } from "../omni/OmniWallet";
 
 export interface CosmosConnectorOptions {
   config: { chain: string; rpc: string; denom: string; prefix: string }[];
@@ -21,8 +23,8 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
 
   config: { chain: string; rpc: string; denom: string; prefix: string }[];
 
-  constructor(options?: CosmosConnectorOptions) {
-    super();
+  constructor(wibe3: HotConnector, options?: CosmosConnectorOptions) {
+    super(wibe3);
 
     this.options = [{ name: "Keplr", icon: this.icon, id: "keplr" }];
     this.config = options?.config || [
@@ -38,6 +40,10 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
 
   getConfig(chain: string) {
     return this.config.find((c) => c.chain === chain);
+  }
+
+  async createWallet(address: string): Promise<OmniWallet> {
+    return new CosmosWallet(this, { address });
   }
 
   async setKeplrWallet(address: string, publicKey: string): Promise<void> {

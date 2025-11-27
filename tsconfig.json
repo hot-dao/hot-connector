@@ -18,5 +18,5 @@
     "jsxImportSource": "react",
     "resolveJsonModule": true
   },
-  "include": ["./src"]
+  "include": ["src"]
 }

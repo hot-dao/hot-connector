@@ -9,8 +9,8 @@ import { formatter, Token } from "../omni/token";
 import { ReviewFee } from "../omni/fee";
 
 interface ProtocolWallet {
-  signTransaction: (transaction: Transaction) => Promise<{ signedTxXdr: string }>;
-  signMessage: (message: string) => Promise<{ signedMessage: string }>;
+  signTransaction?: (transaction: Transaction) => Promise<{ signedTxXdr: string }>;
+  signMessage?: (message: string) => Promise<{ signedMessage: string }>;
   address: string;
 }
 
@@ -81,6 +81,7 @@ class StellarWallet extends OmniWallet {
   }
 
   async sendTransaction(transaction: Transaction) {
+    if (!this.wallet.signTransaction) throw "not impl";
     const result = await this.wallet.signTransaction(transaction);
     const txObject = new Transaction(result.signedTxXdr, Networks.PUBLIC);
     const { hash } = await bridge.stellar.callHorizon((t) => t.submitTransaction(txObject as any));
@@ -88,6 +89,7 @@ class StellarWallet extends OmniWallet {
   }
 
   async signMessage(message: string) {
+    if (!this.wallet.signMessage) throw "not impl";
     return await this.wallet.signMessage(message);
   }
 

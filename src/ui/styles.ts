@@ -1,48 +1,31 @@
+import styled from "styled-components";
+
 const font = `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"`;
 
-export const css = (id: string) => /*css*/ `
-${id} * {
-  box-sizing: border-box;
-  font-family: ${font};
-  color: #fff;
-}
-
-#tc-widget-root {
-  z-index: 10000000000000;
+export const ModalContainer = styled.div`
   position: fixed;
-}
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100000000;
+  background-color: rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  transition: opacity 0.2s ease-in-out;
+  backdrop-filter: blur(10px);
 
-${id} p, h1, h2, h3, h4, h5, h6 {
-  margin: 0;
-}
-
-${id} .modal-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 100000000;
-    background-color: rgba(0, 0, 0, 0.2);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    transition: opacity 0.2s ease-in-out;
-    backdrop-filter: blur(10px);
-}
-
-@media (max-width: 600px) {
-  ${id} .modal-container {
+  @media (max-width: 600px) {
     justify-content: flex-end;
   }
-}
+`;
 
-${id} .modal-content {
+export const ModalContent = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-
   max-width: 420px;
   max-height: 660px;
   width: 100%;
@@ -50,10 +33,8 @@ ${id} .modal-content {
   background: #0d0d0d;
   border: 1.5px solid rgba(255, 255, 255, 0.1);
   transition: transform 0.2s ease-in-out;
-}
 
-@media (max-width: 600px) {
-  ${id} .modal-content {
+  @media (max-width: 600px) {
     max-width: 100%;
     width: 100%;
     max-height: 80%;
@@ -62,10 +43,9 @@ ${id} .modal-content {
     border: none;
     border-top: 1.5px solid rgba(255, 255, 255, 0.1);
   }
-}
+`;
 
-
-${id} .modal-header {
+export const ModalHeader = styled.div`
   display: flex;
   padding: 16px;
   gap: 16px;
@@ -73,40 +53,39 @@ ${id} .modal-header {
   align-items: center;
   justify-content: center;
   position: relative;
-}
 
-${id} .modal-header button {
-  position: absolute;
-  right: 16px;
-  top: 16px;
-  width: 32px;
-  height: 32px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background 0.2s ease-in-out;
-  border: none;
-  background: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+  button {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+    border: none;
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-${id} .modal-header button:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-  
-${id} .modal-header p {
-  color: #fff;
-  text-align: center;
-  font-size: 24px;
-  font-style: normal;
-  font-weight: 600;
-  line-height: normal;
-  margin: 0;
-}
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+  }
 
+  p {
+    color: #fff;
+    text-align: center;
+    font-size: 24px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+    margin: 0;
+  }
+`;
 
-${id} .modal-body {
+export const ModalBody = styled.div`
   display: flex;
   padding: 16px;
   flex-direction: column;
@@ -114,29 +93,36 @@ ${id} .modal-body {
   text-align: center;
   gap: 4px;
   overflow: auto;
-
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.08);
   width: 100%;
   flex: 1;
-}
 
-${id} .modal-body textarea {
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  background: #0d0d0d;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  outline: none;
-  font-size: 16px;
-  transition: background 0.2s ease-in-out;
-  font-family: monospace;
-  font-size: 12px;
-}
+  textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    background: #0d0d0d;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    outline: none;
+    font-size: 12px;
+    transition: background 0.2s ease-in-out;
+    font-family: monospace;
+  }
 
+  p {
+    color: rgba(255, 255, 255, 0.9);
+    text-align: center;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: normal;
+    letter-spacing: -0.8px;
+  }
+`;
 
-${id} .footer {
+export const Footer = styled.div`
   width: 100%;
   display: flex;
   align-items: center;
@@ -144,26 +130,16 @@ ${id} .footer {
   padding: 16px 24px;
   color: #fff;
   gap: 12px;
-}
 
-${id} .modal-body p {
-  color: rgba(255, 255, 255, 0.9);
-  text-align: center;
-  font-size: 16px;
-  font-style: normal;
-  font-weight: 500;
-  line-height: normal;
-  letter-spacing: -0.8px;
-}
+  img {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+`;
 
-${id} .footer img {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-${id} .get-wallet-link {
+export const GetWalletLink = styled.button`
   color: rgba(255, 255, 255, 0.5);
   text-align: center;
   font-size: 16px;
@@ -172,85 +148,71 @@ ${id} .get-wallet-link {
   margin-left: auto;
   text-decoration: none;
   transition: color 0.2s ease-in-out;
+  background: transparent;
+  border: none;
+  outline: none;
   cursor: pointer;
-}
-  
-${id} .get-wallet-link:hover {
-  color: rgba(255, 255, 255, 1);
-}
 
+  &:hover {
+    color: rgba(255, 255, 255, 1);
+  }
+`;
 
-${id} .connect-item {
+export const PopupOption = styled.button`
   display: flex;
   padding: 8px;
   align-items: center;
-  gap: 12px;
   align-self: stretch;
   cursor: pointer;
-
   transition: background 0.2s ease-in-out;
   border-radius: 24px;
-}
+  outline: none;
+  border: none;
+  background: transparent;
+  gap: 12px;
 
-${id} .connect-item img {
-  width: 44px;
-  height: 44px;
-  border-radius: 16px;
-  object-fit: cover;
-  flex-shrink: 0;
-}
+  img {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
 
-${id} .connect-item-info {
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  p {
+    color: rgba(255, 255, 255, 0.9);
+    text-align: center;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+    letter-spacing: -0.36px;
+    margin: 0;
+  }
+`;
+
+export const PopupOptionInfo = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   text-align: left;
   flex: 1;
   margin-top: -2px;
-}
 
-${id} .connect-item-info .wallet-address {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 14px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: normal;
-}
-
-${id} .connect-item:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-
-${id} .connect-item p {
-  color: rgba(255, 255, 255, 0.9);
-  text-align: center;
-  font-size: 18px;
-  font-style: normal;
-  font-weight: 600;
-  line-height: normal;
-  letter-spacing: -0.36px;
-  margin: 0;
-}
-
-${id} .qr-code {
-  background: url("https://app.hot-labs.org/assets/QR.svg") center center / cover no-repeat;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-  width: 400px;
-  height: 400px;
-  flex-shrink: 0;
-
-  canvas {
-    transform: translate(1px, 22px);
+  .wallet-address {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: normal;
   }
-}
+`;
 
-
-${id} button {
+export const PopupButton = styled.button`
   width: 100%;
   padding: 12px;
   border-radius: 24px;
@@ -262,30 +224,40 @@ ${id} button {
   font-size: 16px;
   transition: background 0.2s ease-in-out;
   margin-top: 16px;
-}
+  height: 56px;
 
-${id} button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
 
-${id} .copy-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: background 0.2s ease-in-out;
-  background: #282c30;
-  padding: 4px 8px;
-  border-radius: 16px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  margin: auto;
-  margin-top: -18px;
-}
+export const PopupRoot = styled.div`
+  height: 100%;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p {
+    font-family: ${font};
+    margin: 0;
+  }
 
-${id} .copy-button:hover {
-  background: #383c40;
-}
+  /* Hide scrollbar for all scrollable elements inside PopupRoot */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+
+  /* Also hide scrollbars for all inner elements */
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+  }
 `;

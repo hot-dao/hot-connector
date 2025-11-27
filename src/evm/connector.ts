@@ -6,6 +6,9 @@ import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
 import { WalletType } from "../omni/config";
 import { isInjected } from "../hot-wallet/hot";
 import EvmAccount from "./wallet";
+import { HotConnector } from "../HotConnector";
+import { OmniWallet } from "../omni/OmniWallet";
+import EvmWallet from "./wallet";
 
 export interface EvmConnectorOptions {
   projectId?: string;
@@ -31,8 +34,8 @@ class EvmConnector extends OmniConnector<EvmAccount> {
   _walletconnectPopup: WalletConnectPopup | null = null;
   provider?: Promise<UniversalProvider>;
 
-  constructor(options: EvmConnectorOptions = {}) {
-    super();
+  constructor(wibe3: HotConnector, options: EvmConnectorOptions = {}) {
+    super(wibe3);
 
     if (options.chains) this.chains.push(...options.chains);
 
@@ -84,6 +87,10 @@ class EvmConnector extends OmniConnector<EvmAccount> {
   async getConnectedWallet() {
     if (isInjected()) return { type: "wallet", id: "org.hot-labs" };
     return await this.getStorage();
+  }
+
+  async createWallet(address: string): Promise<OmniWallet> {
+    return new EvmWallet(this, { address });
   }
 
   async connectWalletConnect() {

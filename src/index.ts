@@ -2,7 +2,6 @@ export { bridge, Network, OmniToken, WalletType } from "./omni/config";
 
 export { OmniWallet } from "./omni/OmniWallet";
 export { OmniConnector } from "./omni/OmniConnector";
-export { Chains } from "./omni/chains";
 export { Intents } from "./omni/Intents";
 export { ReviewFee } from "./omni/fee";
 export { Token } from "./omni/token";

@@ -7,6 +7,7 @@ import { Token } from "../../omni/token";
 import Popup from "../Popup";
 
 import TokenCard from "./TokenCard";
+import { PopupButton } from "../styles";
 
 interface PaymentProps {
   connector: HotConnector;
@@ -14,10 +15,10 @@ interface PaymentProps {
   amount: bigint;
   receiver: string;
   onReject: (e: any) => void;
-  onSuccess: (review: BridgeReview) => void | null;
+  onProcess: (task: Promise<BridgeReview>) => void;
 }
 
-const Payment = ({ connector, token, amount, receiver, onReject, onSuccess }: PaymentProps) => {
+const Payment = ({ connector, token, amount, receiver, onReject, onProcess }: PaymentProps) => {
   const [selected, setSelected] = useState<Token | null>(null);
   const [qoute, setQoute] = useState<BridgeReview | null>(null);
   const [isQoute, setIsQoute] = useState(false);
@@ -30,7 +31,7 @@ const Payment = ({ connector, token, amount, receiver, onReject, onSuccess }: Pa
 
     setIsQoute(false);
     omni
-      .reviewSwap({ sender, from: selected, to: token, amount: (amount * 1005n) / 1000n, receiver: receiver, slippage: 0.005, type: "exactOut" })
+      .reviewSwap({ sender, refund: sender, from: selected, to: token, amount: (amount * 1005n) / 1000n, receiver: receiver, slippage: 0.005, type: "exactOut" })
       .then(setQoute)
       .catch((e) => console.error(e))
       .finally(() => setIsQoute(false));
@@ -42,11 +43,8 @@ const Payment = ({ connector, token, amount, receiver, onReject, onSuccess }: Pa
     if (!sender) return;
 
     setIsPaying(true);
-    omni
-      .makeSwap(sender, qoute!, { log: (message) => console.log(message) })
-      .then(onSuccess)
-      .catch((e) => console.error(e))
-      .finally(() => setIsPaying(false));
+    const task = omni.makeSwap(sender, qoute!, { log: (message) => console.log(message) }).finally(() => setIsPaying(false));
+    onProcess(task);
   };
 
   const need = token.usd * token.float(amount);
@@ -93,9 +91,9 @@ const Payment = ({ connector, token, amount, receiver, onReject, onSuccess }: Pa
         </div>
       )}
 
-      <button onClick={handlePay} disabled={isPaying || qoute == null}>
+      <PopupButton onClick={handlePay} disabled={isPaying || qoute == null}>
         {isPaying ? "Paying..." : qoute == null ? "Quoting..." : `Pay`}
-      </button>
+      </PopupButton>
     </Popup>
   );
 };

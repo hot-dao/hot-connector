@@ -1,7 +1,6 @@
 import { TokenResponse } from "@defuse-protocol/one-click-sdk-typescript";
 
-import { Network, WalletType, reverseChainsMap } from "./config";
-import { Chains } from "./chains";
+import { Network, OmniToken, WalletType, chainsMap, reverseChainsMap } from "./config";
 
 export interface Token {
   chain: number;
@@ -19,8 +18,10 @@ export class Token {
   omniAddress: string;
   originalChain: number;
   originalAddress: string;
+  originalChainSymbol: string;
 
   constructor(readonly info: TokenResponse & { omni?: true }) {
+    this.originalChainSymbol = info.blockchain;
     this.originalChain = reverseChainsMap[info.blockchain];
     this.originalAddress = info.contractAddress || "native";
     this.chain = info.omni ? -4 : reverseChainsMap[info.blockchain];
@@ -32,12 +33,28 @@ export class Token {
   }
 
   get chainIcon() {
-    if (this.chain === Network.Juno) return "https://legacy.cosmos.network/presskit/cosmos-brandmark-dynamic-dark.svg";
-    return Chains.get(this.chain).icon;
+    if (this.chain === Network.Hot) return "https://tgapp.herewallet.app/images/hot/hot-icon.png";
+    if (this.chain === Network.Juno) return "https://storage.herewallet.app/ft/4444118:ujuno.png";
+    if (this.chain === Network.Gonka) return "https://storage.herewallet.app/ft/4444119:ngonka.png";
+    return `https://storage.herewallet.app/ft/${this.chain}:native.png`;
+  }
+
+  get originalChainIcon() {
+    if (this.originalChain === Network.Juno) return "https://legacy.cosmos.network/presskit/cosmos-brandmark-dynamic-dark.svg";
+    return `https://storage.herewallet.app/ft/${this.originalChain}:native.png`;
+  }
+
+  get chainName() {
+    return chainsMap[this.chain]?.name || this.originalChainSymbol;
   }
 
   get id() {
     return `${this.chain}:${this.address}`;
+  }
+
+  get isMainOmni() {
+    if (this.chain !== Network.Hot) return false;
+    return Object.values(OmniToken).some((token) => this.address === token);
   }
 
   get type() {
@@ -61,6 +78,7 @@ export class Token {
   }
 
   get icon() {
+    if (this.chain === Network.Hot) return `https://storage.herewallet.app/ft/${this.originalChain}:${this.originalAddress.toLowerCase()}.png`;
     return `https://storage.herewallet.app/ft/${this.id.toLowerCase()}.png`;
   }
 

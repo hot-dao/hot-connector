@@ -159,30 +159,25 @@ class IntentsBuilder {
     return this;
   }
 
-  async execute(args?: { connector?: HotConnector }) {
-    if (!this.signer) throw new Error("No signer attached");
+  async execute() {
+    const signer = this.signer;
+    if (!signer) throw new Error("No signer attached");
 
-    console.log(args);
+    const balances = await signer.getAssets();
+    for (const token of this.need.keys()) {
+      const amount = this.need.get(token) || 0n;
+      const balance = balances[token] || 0n;
+      if (amount === 0n) continue;
 
-    if (args?.connector) {
-      const balances = await this.signer.getAssets();
-      for (const token of this.need.keys()) {
-        const amount = this.need.get(token) || 0n;
-        const balance = balances[token] || 0n;
-        if (amount === 0n) continue;
-
-        if (balance < amount) {
-          const need = amount - balance;
-          const ft = omni.omni(token as OmniToken);
-          const popup = await args.connector.deposit(token as any, Number(ft.float(need)));
-          await this.signer.waitUntilBalance({ [token]: amount }, this.signer.omniAddress);
-          args.connector.fetchTokens(this.signer);
-          popup.close();
-        }
+      if (balance < amount) {
+        const need = amount - balance;
+        const ft = omni.omni(token as OmniToken);
+        await signer.connector.wibe3.deposit(token as any, Number(ft.float(need)));
+        await signer.waitUntilBalance({ [token]: amount }, signer.omniAddress);
       }
     }
 
-    const signed = await this.signer.signIntents(this.intents, { nonce: this.nonce, deadline: this.deadline ? +this.deadline : undefined });
+    const signed = await signer.signIntents(this.intents, { nonce: this.nonce, deadline: this.deadline ? +this.deadline : undefined });
     return await Intents.publishSignedIntents([signed], this.hashes);
   }
 }

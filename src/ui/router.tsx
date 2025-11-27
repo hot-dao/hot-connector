@@ -17,53 +17,63 @@ import SelectWallet from "./payment/SelectWallet";
 import { BridgeProps } from "./payment/Bridge";
 
 export const openPayment = (connector: HotConnector, token: Token, amount: bigint, receiver: string) => {
-  return present<BridgeReview>((resolve, reject) => {
-    return <Payment onReject={reject} onSuccess={resolve} connector={connector} token={token} amount={amount} receiver={receiver} />;
+  return new Promise<Promise<BridgeReview>>((resolve, reject) => {
+    present((close) => (
+      <Payment //
+        onReject={() => (close(), reject())}
+        onProcess={resolve}
+        connector={connector}
+        token={token}
+        amount={amount}
+        receiver={receiver}
+      />
+    ));
   });
 };
 
-export const openLogoutPopup = (connector: OmniConnector): Promise<void> => {
-  return present<void>((resolve, reject) => {
-    return <LogoutPopup connector={connector} onApprove={() => resolve()} onReject={() => reject(new Error("User rejected"))} />;
+export const openLogoutPopup = (connector: OmniConnector) => {
+  return new Promise<void>((resolve, reject) => {
+    present((close) => {
+      return (
+        <LogoutPopup //
+          connector={connector}
+          onApprove={() => (close(), resolve())}
+          onReject={() => (close(), reject(new Error("User rejected")))}
+        />
+      );
+    });
   });
 };
 
 export const openBridge = (hot: HotConnector, setup?: BridgeProps["setup"]) => {
-  const controller = { close: () => {} };
-  present<void>((resolve) => {
-    controller.close = resolve;
-    return <Bridge onClose={controller.close} hot={hot} setup={setup} />;
+  return new Promise<BridgeReview>((resolve, reject) => {
+    present((close) => (
+      <Bridge //
+        hot={hot}
+        setup={setup}
+        onProcess={resolve}
+        onClose={() => (close(), reject(new Error("User rejected")))}
+      />
+    ));
   });
-
-  return controller;
 };
 
 export const openConnector = (hot: HotConnector, connector?: OmniConnector) => {
-  return present<void>((resolve, reject) => {
-    return <Connector hot={hot} onClose={() => reject(new Error("User rejected"))} />;
-  });
+  present((close) => <Connector hot={hot} onClose={close} />);
 };
 
 export const openProfile = (hot: HotConnector) => {
-  return present<void>((resolve, reject) => {
-    return <Profile hot={hot} onClose={() => resolve()} />;
-  });
+  present((close) => <Profile hot={hot} onClose={close} />);
 };
 
 export const openSelectTokenPopup = ({ hot, initialChain, onSelect }: { hot: HotConnector; initialChain?: number; onSelect: (token: Token, wallet?: OmniWallet) => void }) => {
-  return present<Token | null>((resolve, reject) => {
-    return <SelectTokenPopup hot={hot} initialChain={initialChain} onClose={reject} onSelect={(t, w) => (onSelect(t, w), reject())} />;
-  });
+  present((close) => <SelectTokenPopup hot={hot} initialChain={initialChain} onClose={close} onSelect={(t, w) => (onSelect(t, w), close())} />);
 };
 
 export const openWalletPicker = (connector: OmniConnector) => {
-  return present<void>((resolve, reject) => {
-    return <WalletPicker initialConnector={connector} onClose={reject} />;
-  });
+  present((close) => <WalletPicker initialConnector={connector} onClose={close} />);
 };
 
-export const openSelectWallet = (hot: HotConnector, isRecipient: boolean, type: WalletType, onSelect: (wallet?: OmniWallet) => void) => {
-  return present<void>((resolve, reject) => {
-    return <SelectWallet isRecipient={isRecipient} hot={hot} type={type} onSelect={onSelect} onClose={reject} />;
-  });
+export const openSelectWallet = (props: { hot: HotConnector; current?: OmniWallet | "qr"; isRecipient: boolean; type: WalletType; onSelect: (wallet?: OmniWallet | "qr") => void }) => {
+  present((close) => <SelectWallet {...props} onClose={close} />);
 };

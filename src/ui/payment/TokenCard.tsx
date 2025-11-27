@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { formatter, Token } from "../../omni/token";
 import { HotConnector } from "../../HotConnector";
 import { OmniWallet } from "../../omni/OmniWallet";
+import { PopupOption } from "../styles";
+import { chainsMap } from "../../omni/config";
 
 const images = {
   cached: new Map<string, Promise<void>>(),
@@ -82,17 +84,17 @@ export const TokenIcon = ({ token, wallet }: { token: Token; wallet?: OmniWallet
         <img src={token.chainIcon} alt={token.symbol} style={styled.chainIcon} />
       ) : (
         <div style={styled.chainIcon}>
-          <p style={{ fontSize: 9, color: "#fff" }}>{token.chain.toString().charAt(0)}</p>
+          <p style={{ fontSize: 9, color: "#fff" }}>{token.originalChainSymbol.charAt(0)?.toUpperCase()}</p>
         </div>
       )}
 
       {token.chain === -4 && wallet?.type && (
         <>
-          {chainIcon === ImageState.Loaded ? (
+          {walletIcon === ImageState.Loaded ? (
             <img src={wallet.icon} style={{ ...styled.chainIcon, left: 0 }} />
           ) : (
             <div style={{ ...styled.chainIcon, left: 0 }}>
-              <p style={{ fontSize: 9, color: "#fff" }}>{wallet.type.toString().charAt(0)}</p>
+              <p style={{ fontSize: 9, color: "#fff" }}>{chainsMap[wallet.type]?.name.charAt(0)?.toUpperCase()}</p>
             </div>
           )}
         </>
@@ -101,14 +103,16 @@ export const TokenIcon = ({ token, wallet }: { token: Token; wallet?: OmniWallet
   );
 };
 
-const TokenCard = ({ token, onSelect, hot, wallet }: { token: Token; onSelect: (token: Token, wallet?: OmniWallet) => void; hot: HotConnector; wallet?: OmniWallet }) => {
+const TokenCard = ({ token, onSelect, hot, wallet, control }: { token: Token; onSelect: (token: Token, wallet?: OmniWallet) => void; hot: HotConnector; wallet?: OmniWallet; control?: React.ReactNode }) => {
   const balance = hot.balance(wallet, token);
+  const symbol = token.chain === -4 && !token.isMainOmni ? `${token.originalChainSymbol}_${token.symbol}` : token.symbol;
+
   return (
-    <div key={token.id} onClick={() => onSelect(token, wallet)} className="connect-item">
+    <PopupOption key={token.id} onClick={() => onSelect(token, wallet)}>
       <TokenIcon token={token} wallet={wallet} />
 
       <div style={{ marginTop: -2, display: "flex", flexDirection: "column", gap: 4, textAlign: "left" }}>
-        <p style={{ textAlign: "left", fontSize: 20, fontWeight: "bold" }}>{token.symbol}</p>
+        <p style={{ textAlign: "left", fontSize: 20, fontWeight: "bold" }}>{symbol}</p>
         <p style={{ textAlign: "left", fontSize: 14, color: "#c6c6c6" }}>${formatter.amount(token.usd)}</p>
       </div>
 
@@ -116,7 +120,9 @@ const TokenCard = ({ token, onSelect, hot, wallet }: { token: Token; onSelect: (
         <p style={{ textAlign: "right", fontSize: 20 }}>{token.readable(balance)}</p>
         <p style={{ textAlign: "right", fontSize: 14, color: "#c6c6c6" }}>${token.readable(balance, token.usd)}</p>
       </div>
-    </div>
+
+      {control}
+    </PopupOption>
   );
 };
 

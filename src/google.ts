@@ -12,6 +12,7 @@ import NearWallet from "./near/wallet";
 import SolanaWallet from "./solana/wallet";
 import TonWallet from "./ton/wallet";
 import StellarWallet from "./stellar/wallet";
+import { HotConnector } from "./HotConnector";
 
 class GoogleConnector extends OmniConnector<OmniWallet> {
   walletTypes = [WalletType.EVM, WalletType.STELLAR, WalletType.TON, WalletType.NEAR, WalletType.SOLANA];
@@ -20,8 +21,8 @@ class GoogleConnector extends OmniConnector<OmniWallet> {
   name = "Google Wallet";
   id = "google";
 
-  constructor() {
-    super();
+  constructor(wibe3: HotConnector) {
+    super(wibe3);
 
     makeObservable(this, {
       connectWallet: action,

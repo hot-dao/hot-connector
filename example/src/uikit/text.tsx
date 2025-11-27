@@ -2,11 +2,11 @@ import styled from "styled-components";
 
 export const P = styled.p`
   color: var(--text-primary, #ebdedc);
-  font-feature-settings: "calt" off;
-  font-size: 14px;
+  font-size: 16px;
   font-style: normal;
   font-weight: 500;
-  line-height: 125%;
+  line-height: 140%; /* 22.4px */
+  letter-spacing: -0.48px;
   margin: 0;
 `;
 

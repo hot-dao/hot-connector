@@ -54,20 +54,24 @@ const AuthIntentPopupComponent: React.FC<AuthIntentPopupProps> = ({ wallet, onAp
 };
 
 export const openAuthPopup = <T,>(wallet: OmniWallet, then: () => Promise<T>) => {
-  return present<T>((resolve, reject) => {
-    return (
-      <AuthIntentPopupComponent
-        wallet={wallet}
-        onReject={reject}
-        onApprove={async () => {
-          try {
-            const result = await then();
-            resolve(result);
-          } catch (e) {
-            reject(e);
-          }
-        }}
-      />
-    );
+  return new Promise((resolve, reject) => {
+    present((close) => {
+      return (
+        <AuthIntentPopupComponent
+          wallet={wallet}
+          onReject={() => (close(), reject())}
+          onApprove={async () => {
+            try {
+              const result = await then();
+              resolve(result);
+            } catch (e) {
+              reject(e);
+            } finally {
+              close();
+            }
+          }}
+        />
+      );
+    });
   });
 };

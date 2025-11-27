@@ -1,7 +1,8 @@
 import React from "react";
 
-import Popup, { present } from "../Popup";
+import Popup from "../Popup";
 import { OmniConnector } from "../../omni/OmniConnector";
+import { PopupButton } from "../styles";
 
 interface LogoutPopupProps {
   connector: OmniConnector;
@@ -13,7 +14,7 @@ const LogoutPopup: React.FC<LogoutPopupProps> = ({ connector, onApprove, onRejec
   return (
     <Popup header={<p>Disconnect {connector.name}</p>} onClose={onReject}>
       <p style={{ textAlign: "center", color: "#fff" }}>Your local session will be cleared, see you there!</p>
-      <button onClick={onApprove}>Bye-bye</button>
+      <PopupButton onClick={onApprove}>Bye-bye</PopupButton>
     </Popup>
   );
 };

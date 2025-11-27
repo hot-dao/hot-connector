@@ -3,12 +3,14 @@ import styled from "styled-components";
 import { toast } from "react-toastify";
 import { useState } from "react";
 
-import { formatter } from "../../src/omni/token";
-import otc from "./otc";
-import { wibe3 } from "./wibe3";
-import { OmniToken } from "../../src";
+import { OmniToken } from "../wibe3";
+import { formatter } from "../wibe3/omni/token";
+import { wibe3 } from "../engine";
 
-const CreateBuy = () => {
+import { CreateCard } from "./CreateBuy";
+import otc from "./otc";
+
+const CreateSell = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [valueAmount, setAmount] = useState("");
   const [valuePrice, setPrice] = useState("");
@@ -21,12 +23,11 @@ const CreateBuy = () => {
       setIsLoading(true);
       const wallet = wibe3.wallets.find((t) => t.omniAddress);
       if (!wallet) throw "";
-
-      await otc.fund(wallet, OmniToken.USDT, OmniToken.JUNO, +amount, 1 / +price);
-      toast.success("GONKA bought successfully");
+      await otc.fund(wallet, OmniToken.GONKA, OmniToken.USDT, +amount, +price);
+      toast.success("GONKA sold successfully");
       setIsLoading(false);
     } catch (error) {
-      toast.error("Failed to buy GONKA");
+      toast.error("Failed to sell GONKA");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -35,10 +36,10 @@ const CreateBuy = () => {
 
   return (
     <CreateCard>
-      <input type="text" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Sell 1 USDT" />
-      <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="to buy 1 GONKA" />
+      <input type="text" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Sell 1 GONKA" />
+      <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="to buy 1 USDT" />
       <Button onClick={sell} disabled={isLoading}>
-        {isLoading ? "Executing" : "Buy GONKA"}
+        {isLoading ? "Executing" : "Sell GONKA"}
       </Button>
     </CreateCard>
   );
@@ -59,29 +60,4 @@ const Button = styled.button`
   font-weight: bold;
 `;
 
-export const CreateCard = styled.div`
-  display: flex;
-  background: var(--surface-common-container--low, #262729);
-  align-items: center;
-  height: 56px;
-  width: 100%;
-
-  input {
-    font-weight: bold;
-    font-size: 24px;
-    outline: none;
-    height: 100%;
-    border: none;
-    padding: 12px;
-    width: calc(50% - 50px);
-  }
-
-  button {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100px;
-  }
-`;
-
-export default observer(CreateBuy);
+export default observer(CreateSell);
