@@ -26,7 +26,10 @@ export class Token {
     this.originalChain = reverseChainsMap[info.blockchain];
     this.chain = info.omni ? -4 : reverseChainsMap[info.blockchain];
 
-    if (this.chain === Network.Stellar) {
+    if (this.chain === Network.Near) {
+      this.address = info.contractAddress === "wrap.near" ? "native" : info.contractAddress || "native";
+      this.originalAddress = this.address;
+    } else if (this.chain === Network.Stellar) {
       this.address = info.contractAddress ? new Asset(info.symbol, info.contractAddress).contractId(Networks.PUBLIC) : "native";
       this.originalAddress = this.address;
     } else {
@@ -83,6 +86,17 @@ export class Token {
     if (this.chain === Network.Cardano) return WalletType.Cardano;
     if (this.chain > 0) return WalletType.EVM;
     return WalletType.unknown;
+  }
+
+  get reserve() {
+    if (this.chain === Network.Ton) return 0.01;
+    if (this.chain === Network.Stellar) return 0;
+    if (this.chain === Network.Juno) return 0.1;
+    if (this.chain === Network.Gonka) return 0.1;
+    if (this.chain === Network.Solana) return 0.001;
+    if (this.chain === Network.Near) return 0.01;
+    if (this.chain === Network.Eth) return 2 / this.usd;
+    return 0.1 / this.usd;
   }
 
   get icon() {

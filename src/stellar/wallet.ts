@@ -192,12 +192,13 @@ class StellarWallet extends OmniWallet {
     };
   }
 
-  static async isTokenActivated(address: string) {
+  static async isTokenActivated(address: string, token: string) {
+    if (address === "native") return true;
     const data = await bridge.stellar.callHorizon((h) => h.loadAccount(address));
     return data.balances.some((ft: any) => {
-      const asset = ft.asset_type === "native" ? Asset.native() : new Asset(ft.asset_code, ft.asset_issuer);
-      const token = ft.asset_type === "native" ? "native" : asset.contractId(Networks.PUBLIC);
-      return token === address;
+      if (!ft.asset_issuer) return false;
+      const asset = new Asset(ft.asset_code, ft.asset_issuer).contractId(Networks.PUBLIC);
+      return asset.toLowerCase() === token.toLowerCase();
     });
   }
 

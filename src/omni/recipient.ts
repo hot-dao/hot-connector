@@ -32,9 +32,9 @@ export class Recipient {
     }
 
     if (type === WalletType.SOLANA) {
-      return new Recipient(WalletType.OMNI, address, hex.encode(base58.decode(address)).toLowerCase());
+      return new Recipient(WalletType.SOLANA, address, hex.encode(base58.decode(address)).toLowerCase());
     }
 
-    throw "Unsupported wallet type";
+    return new Recipient(type, address, "");
   }
 }

@@ -82,6 +82,8 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: Brid
   const showAmountFrom = type === "exactOut" ? +from.float(review?.amountIn ?? 0).toFixed(FIXED) : formatter.fromInput(value);
   const showAmountTo = type === "exactIn" ? +to.float(review?.amountOut ?? 0).toFixed(FIXED) : formatter.fromInput(value);
 
+  const availableBalance = sender !== "qr" ? +Math.max(0, from.float(hot.balance(sender, from)) - from.reserve).toFixed(FIXED) : 0;
+
   useEffect(() => {
     localStorage.setItem("bridge:from", from.id);
     localStorage.setItem("bridge:to", to.id);
@@ -123,7 +125,7 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: Brid
         setReview(review);
       } catch (e) {
         if (currentReviewId !== reviewId.current) return;
-        setIsError("Failed to review swap");
+        setIsError(typeof e === "string" ? e : e instanceof Error ? e.message : "Failed to review swap");
         setIsReviewing(false);
         setReview(null);
         console.error(e);
@@ -168,11 +170,11 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: Brid
     if (sender === "qr") return;
     if (isFiat) {
       setType("exactIn");
-      const max = from.float(hot.balance(sender, from)) * from.usd;
+      const max = from.float(availableBalance) * from.usd;
       setValue(String(+max.toFixed(FIXED)));
     } else {
       setType("exactIn");
-      const max = from.float(hot.balance(sender, from));
+      const max = from.float(availableBalance);
       setValue(String(+max.toFixed(FIXED)));
     }
   };
@@ -284,7 +286,7 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: Brid
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
               {sender !== "qr" && (
                 <AvailableBalance>
-                  <p>Balance: ${from.readable(hot.balance(sender, from), from.usd)}</p>
+                  <p>Balance: ${from.readable(availableBalance, from.usd)}</p>
                   <RefreshButton onClick={() => sender && hot.fetchToken(from, sender)} />
                 </AvailableBalance>
               )}
@@ -307,7 +309,7 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: Brid
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
               {sender !== "qr" && (
                 <AvailableBalance>
-                  <p>Balance: {`${from.readable(hot.balance(sender, from))} ${from.symbol}`}</p>
+                  <p>Balance: {`${from.readable(availableBalance)} ${from.symbol}`}</p>
                   <RefreshButton onClick={() => sender && hot.fetchToken(from, sender)} />
                 </AvailableBalance>
               )}
