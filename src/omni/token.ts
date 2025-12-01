@@ -89,12 +89,16 @@ export class Token {
   }
 
   get reserve() {
+    if (this.address !== "native") return 0;
+    if (this.chain === Network.Hot) return 0;
     if (this.chain === Network.Ton) return 0.01;
     if (this.chain === Network.Stellar) return 0;
     if (this.chain === Network.Juno) return 0.1;
     if (this.chain === Network.Gonka) return 0.1;
     if (this.chain === Network.Solana) return 0.001;
     if (this.chain === Network.Near) return 0.01;
+    if (this.usd === 0) return 0;
+
     if (this.chain === Network.Eth) return 2 / this.usd;
     return 0.1 / this.usd;
   }

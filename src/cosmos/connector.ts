@@ -6,7 +6,6 @@ import { hex } from "@scure/base";
 import { WalletType } from "../omni/config";
 import { HotConnector } from "../HotConnector";
 import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
-import { OmniWallet } from "../omni/OmniWallet";
 import CosmosWallet from "./wallet";
 
 export interface CosmosConnectorOptions {
@@ -42,10 +41,6 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
     return this.config.find((c) => c.chain === chain);
   }
 
-  async createWallet(address: string): Promise<OmniWallet> {
-    return new CosmosWallet(this, { address });
-  }
-
   async setKeplrWallet(address: string, publicKey: string) {
     const keplr = await Keplr.getKeplr();
     if (!keplr) throw new Error("Keplr not found");
@@ -53,7 +48,7 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
     return this.setWallet(
       new CosmosWallet(this, {
         address: address,
-        publicKey: publicKey,
+        publicKeyHex: publicKey,
         disconnect: () => keplr.disable(),
         sendTransaction: async (signDoc: any, opts = { preferNoSetFee: true }) => {
           await keplr.enable(this.config.map((c) => c.chain));
@@ -61,8 +56,6 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
           const account = await keplr.getKey(signDoc.chainId);
           const protoSignResponse = await keplr.signDirect(signDoc.chainId, account.bech32Address, signDoc, opts);
           const client = await StargateClient.connect(this.getConfig(signDoc.chainId)?.rpc || "");
-
-          console.log({ signDoc, account, opts, protoSignResponse });
 
           // Build a TxRaw and serialize it for broadcasting
           const protobufTx = TxRaw.encode({

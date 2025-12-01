@@ -170,12 +170,10 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: Brid
     if (sender === "qr") return;
     if (isFiat) {
       setType("exactIn");
-      const max = from.float(availableBalance) * from.usd;
-      setValue(String(+max.toFixed(FIXED)));
+      setValue(String(+(availableBalance * from.usd).toFixed(FIXED)));
     } else {
       setType("exactIn");
-      const max = from.float(availableBalance);
-      setValue(String(+max.toFixed(FIXED)));
+      setValue(String(availableBalance));
     }
   };
 

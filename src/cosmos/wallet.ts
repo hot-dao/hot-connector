@@ -11,7 +11,7 @@ interface ProtocolWallet {
   disconnect?: () => Promise<void>;
   sendTransaction?: (signDoc: any) => Promise<string>;
   address: string;
-  publicKey?: string;
+  publicKeyHex: string;
 }
 
 export default class CosmosWallet extends OmniWallet {
@@ -26,7 +26,7 @@ export default class CosmosWallet extends OmniWallet {
   }
 
   get publicKey() {
-    return this.wallet.publicKey || "";
+    return this.wallet.publicKeyHex;
   }
 
   get omniAddress() {

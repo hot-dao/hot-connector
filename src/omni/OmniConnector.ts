@@ -37,7 +37,6 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O extends
   }
 
   abstract connect(id?: string): Promise<OmniWallet>;
-  abstract createWallet(address: string): Promise<OmniWallet>;
 
   abstract walletTypes: WalletType[];
   abstract type: ConnectorType;

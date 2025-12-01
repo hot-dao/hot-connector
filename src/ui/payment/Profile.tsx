@@ -71,7 +71,7 @@ export const Profile = observer(({ hot, onClose }: { hot: HotConnector; onClose:
         </p>
       </div>
 
-      {tokensList.filter((t) => t != null && t.chain === -4).length && (
+      {tokensList.filter((t) => t != null && t.chain === -4).length > 0 && (
         <TokenCards style={{ marginTop: 16 }}>
           <p style={{ fontSize: 16, fontWeight: 600, color: "#d2d2d2", textAlign: "left" }}>Tokens to withdraw</p>
           {tokensList.filter((t) => t != null && t.chain === -4).map((t) => t?.component)}
@@ -79,7 +79,7 @@ export const Profile = observer(({ hot, onClose }: { hot: HotConnector; onClose:
         </TokenCards>
       )}
 
-      {tokensList.filter((t) => t != null && t.chain !== -4).length && (
+      {tokensList.filter((t) => t != null && t.chain !== -4).length > 0 && (
         <TokenCards style={{ marginTop: 16 }}>
           {/* Tokens to exchange */}
           {tokensList.filter((t) => t != null && t.chain !== -4).map((t) => t?.component)}

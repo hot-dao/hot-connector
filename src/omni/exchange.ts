@@ -1,6 +1,7 @@
 import { GetExecutionStatusResponse, OneClickService, ApiError, OpenAPI, QuoteRequest, QuoteResponse } from "@defuse-protocol/one-click-sdk-typescript";
 import { makeObservable, observable, runInAction } from "mobx";
 import { utils } from "@hot-labs/omni-sdk";
+import { hex } from "@scure/base";
 
 import NearWallet from "../near/wallet";
 import CosmosWallet from "../cosmos/wallet";
@@ -97,7 +98,7 @@ export class Exchange {
       const cosmosBridge = await bridge.cosmos();
       const hash = await cosmosBridge.deposit({
         sendTransaction: async (tx) => sender.sendTransaction(tx),
-        senderPublicKey: sender.publicKey!,
+        senderPublicKey: hex.decode(sender.publicKey),
         intentAccount: recipient.omniAddress,
         sender: sender.address,
         token: token.address,
@@ -279,6 +280,10 @@ export class Exchange {
         const minAmount = e.body.message.match(/try at least (\d+)/)?.[1];
         if (minAmount) throw `Minimum amount is ${from.readable(minAmount)} ${from.symbol}`;
         throw "Amount is too low";
+      }
+
+      if (e instanceof ApiError && e.body.message.includes("is not valid")) {
+        throw "This pair is not supported yet";
       }
 
       throw e;
