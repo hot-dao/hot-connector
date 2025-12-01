@@ -40,22 +40,20 @@ const hotWallet = {
 };
 
 class TonConnector extends OmniConnector<TonWallet> {
-  private tonConnect!: TonConnectUI;
-
   type = ConnectorType.WALLET;
   walletTypes = [WalletType.TON, WalletType.OMNI];
   icon = "https://storage.herewallet.app/upload/3ffa61e237f8e38d390abd60200db8edff3ec2b20aad0cc0a8c7a8ba9c318124.png";
   name = "TON Wallet";
   id = "ton";
 
+  private tonConnect = this.initializeConnector();
   constructor(wibe3: HotConnector, readonly args?: TonConnectorOptions) {
     super(wibe3);
-    if (typeof window !== "undefined") {
-      this.initializeConnector();
-    }
   }
 
   async initializeConnector() {
+    if (typeof window === "undefined") throw "TonConnector can only be initialized in the browser";
+
     const url = await fetch(this.args?.tonWalletsUrl || "https://config.ton.org/wallets-v2.json")
       .then((res) => res.json())
       .then((data) => {
@@ -65,7 +63,7 @@ class TonConnector extends OmniConnector<TonWallet> {
         return URL.createObjectURL(myBlob);
       });
 
-    this.tonConnect =
+    const tonConnect =
       this.args?.tonConnect ||
       new TonConnectUI({
         connector: new TonConnect({
@@ -74,19 +72,19 @@ class TonConnector extends OmniConnector<TonWallet> {
         }),
       });
 
-    this.tonConnect.onStatusChange(async (wallet) => {
+    tonConnect.onStatusChange(async (wallet) => {
       if (!wallet) return this.removeWallet();
       this.setWallet(
         new TonWallet(this, {
-          sendTransaction: (params) => this.tonConnect.sendTransaction(params),
-          signData: (params) => this.tonConnect.signData(params),
+          sendTransaction: (params) => tonConnect.sendTransaction(params),
+          signData: (params) => tonConnect.signData(params),
           account: wallet.account,
         })
       );
     });
 
-    this.tonConnect.connector.restoreConnection();
-    this.tonConnect.getWallets().then((wallets) => {
+    tonConnect.connector.restoreConnection();
+    tonConnect.getWallets().then((wallets) => {
       runInAction(() => (this.options = wallets.map((w) => ({ name: w.name, icon: w.imageUrl, id: w.appName, download: w.aboutUrl }))));
     });
 
@@ -97,11 +95,13 @@ class TonConnector extends OmniConnector<TonWallet> {
     }
 
     if (isInjected()) {
-      this.tonConnect.getWallets().then((wallets) => {
+      tonConnect.getWallets().then((wallets) => {
         const wallet = wallets.find((w) => w.appName === "hot");
-        if (wallet) this.tonConnect.connector.connect(wallet, { tonProof: "wibe3" });
+        if (wallet) tonConnect.connector.connect(wallet, { tonProof: "wibe3" });
       });
     }
+
+    return tonConnect;
   }
 
   async createWallet(address: string) {
@@ -109,31 +109,21 @@ class TonConnector extends OmniConnector<TonWallet> {
   }
 
   async connect(id: string) {
-    const wallets = await this.tonConnect.getWallets();
-    const wallet = wallets.find((w) => w.appName === id);
-    if (!wallet) throw new Error("Wallet not found");
-    this.tonConnect.openSingleWalletModal(id);
-
-    return new Promise<TonWallet>((resolve, reject) => {
-      const handleConnect = ({ wallet }: { wallet: TonWallet }) => {
+    const connector = await this.tonConnect;
+    connector.openSingleWalletModal(id);
+    return new Promise<TonWallet>((resolve) => {
+      const dispose = this.onConnect(({ wallet }) => {
         if (!wallet) return;
         resolve(wallet);
-      };
-
-      this.events.on("connect", handleConnect);
-      const disposeModalStateChange = this.tonConnect.onSingleWalletModalStateChange((state) => {
-        if (state.status === "closed") {
-          reject(new Error("User closed the modal"));
-          this.events.off("connect", handleConnect);
-          disposeModalStateChange();
-        }
+        dispose();
       });
     });
   }
 
   async disconnect() {
     super.disconnect();
-    this.tonConnect.disconnect();
+    const connector = await this.tonConnect;
+    connector.disconnect();
   }
 }
 

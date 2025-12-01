@@ -271,9 +271,12 @@ export const PopupRoot = styled.div`
 
   /* Also hide scrollbars for all inner elements */
   * {
+    font-family: ${font};
     scrollbar-width: none;
     -ms-overflow-style: none;
+    box-sizing: border-box;
   }
+
   *::-webkit-scrollbar {
     display: none;
   }

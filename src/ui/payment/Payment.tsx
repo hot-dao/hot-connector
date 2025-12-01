@@ -43,9 +43,8 @@ export const Payment = observer(({ connector, recipient, token: need, amount: ne
   };
 
   useEffect(() => {
-    if (connector.wallets.length === 0) {
-      openConnector(connector);
-    }
+    if (connector.wallets.length !== 0) return;
+    openConnector(connector);
   }, [connector.wallets.length, connector]);
 
   return (

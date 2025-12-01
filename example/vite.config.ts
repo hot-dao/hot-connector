@@ -4,4 +4,5 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig({
   plugins: [nodePolyfills(), react()],
+  base: "/hot-connector/",
 });

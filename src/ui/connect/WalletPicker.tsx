@@ -46,6 +46,7 @@ export const WalletPicker = observer(({ initialConnector, onSelect, onClose }: W
                 setError(null);
                 setWallet(wallet);
                 const instance = await connector.connect(wallet.id);
+                console.log("instance", instance);
                 onSelect?.(instance);
                 onClose();
               } catch (e) {
