@@ -14,6 +14,7 @@ export const ModalContainer = styled.div`
   align-items: center;
   flex-direction: column;
   transition: opacity 0.2s ease-in-out;
+  pointer-events: all;
 
   @media (max-width: 600px) {
     justify-content: flex-end;
