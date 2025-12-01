@@ -22,8 +22,8 @@ export const Profile = observer(({ hot, onClose }: { hot: HotConnector; onClose:
       return balanceB - balanceA;
     })
     .map(({ token, wallet, balance }) => {
+      if (token.float(balance) < 0.000001) return null;
       totalBalance += token.float(balance) * token.usd;
-      if (balance === 0n) return null;
       return {
         chain: token.chain,
         component: (
