@@ -1,3 +1,5 @@
+import { sha256 } from "@noble/hashes/sha2.js";
+
 import { HotConnector } from "../HotConnector";
 import { Intents } from "./Intents";
 import { OmniWallet } from "./OmniWallet";
@@ -8,6 +10,8 @@ export interface TransferIntent {
   intent: "transfer";
   tokens: Record<string, string>;
   receiver_id: string;
+  msg?: string;
+  min_gas?: string;
 }
 
 export interface TokenDiffIntent {
@@ -78,16 +82,38 @@ class IntentsBuilder {
     return this;
   }
 
-  transfer(args: { recipient: string; token: OmniToken; amount: number | bigint }) {
+  transfer(args: { recipient: string; token: OmniToken; amount: number | bigint; msg?: string; tgas?: number }) {
     const omniToken = this.wibe3.omni(args.token);
     const amount = (typeof args.amount === "number" ? omniToken.int(args.amount) : args.amount).toString();
     const intent: TransferIntent = {
       tokens: { [omniToken.omniAddress]: amount },
       receiver_id: args.recipient.toLowerCase(),
       intent: "transfer",
+      msg: args.msg,
+      min_gas: args.tgas ? (BigInt(args.tgas) * TGAS).toString() : undefined,
     };
 
     this.addNeed(args.token, BigInt(amount));
+    this.intents.push(intent);
+    return this;
+  }
+
+  batchTransfer(args: { recipient: string; tokens: Record<OmniToken, number | bigint>; msg?: string; tgas?: number }) {
+    const tokens: Record<string, string> = {};
+    for (const [token, amount] of Object.entries(args.tokens)) {
+      const omniToken = this.wibe3.omni(token as OmniToken);
+      const amountStr = typeof amount === "number" ? omniToken.int(amount).toString() : amount.toString();
+      tokens[omniToken.omniAddress] = amountStr;
+      this.addNeed(token as OmniToken, BigInt(amountStr));
+    }
+    const intent: TransferIntent = {
+      intent: "transfer",
+      tokens,
+      receiver_id: args.recipient.toLowerCase(),
+      msg: args.msg,
+      min_gas: args.tgas ? (BigInt(args.tgas) * TGAS).toString() : undefined,
+    };
+
     this.intents.push(intent);
     return this;
   }
@@ -102,6 +128,14 @@ class IntentsBuilder {
       token_diff: Object.fromEntries(Object.entries(args).map(([token, amount]) => parse(token as OmniToken, amount))),
       intent: "token_diff",
     };
+
+    for (const [token, amountStr] of Object.entries(intent.token_diff)) {
+      const amount = BigInt(amountStr);
+      if (amount < 0n) {
+        const tokenKey = token as OmniToken;
+        this.addNeed(tokenKey, -amount);
+      }
+    }
 
     this.intents.push(intent);
     return this;
@@ -168,9 +202,28 @@ class IntentsBuilder {
     return this;
   }
 
-  async sign() {
+  attachTimeout(seconds: number) {
+    this.deadline = new Date(Date.now() + seconds * 1000);
+    return this;
+  }
+
+  attachSeed(seed: string) {
+    this.nonce = new Uint8Array(sha256(new TextEncoder().encode(seed))).slice(0, 32);
+    return this;
+  }
+
+  async sign(requestToken: boolean = true) {
     const signer = this.signer;
     if (!signer) throw new Error("No signer attached");
+    if (!signer.omniAddress) throw new Error("No omni address");
+
+    if (requestToken && this.need.size > 0) {
+      for (const [token, needAmount] of this.need.entries()) {
+        console.log("requestToken", token, needAmount);
+        await this.wibe3.requestToken(token, needAmount);
+      }
+    }
+
     return await signer.signIntents(this.intents, { nonce: this.nonce, deadline: this.deadline ? +this.deadline : undefined });
   }
 
