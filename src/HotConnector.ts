@@ -2,7 +2,7 @@ import { computed, makeObservable, observable, runInAction } from "mobx";
 
 import { openBridge, openConnector, openPayment, openProfile, openWalletPicker } from "./ui/router";
 import { OmniWallet } from "./omni/OmniWallet";
-import { WalletType } from "./omni/config";
+import { chainsMap, Network, WalletType } from "./omni/config";
 
 import { ConnectorType, OmniConnector } from "./omni/OmniConnector";
 import NearConnector, { NearConnectorOptions } from "./near/connector";
@@ -87,6 +87,11 @@ export class HotConnector {
     });
   }
 
+  setOmniChainBranding(branding: { name: string; icon: string }) {
+    chainsMap[Network.Hot].name = branding.name;
+    chainsMap[Network.Hot].logo = branding.icon;
+  }
+
   getWalletConnector(type: WalletType): OmniConnector | null {
     return this.connectors.find((t) => t.type === ConnectorType.WALLET && t.walletTypes.includes(type)) ?? null;
   }
@@ -169,11 +174,15 @@ export class HotConnector {
     const omni = this.tokens.find((t) => t.address === token)!;
     const omniToken = this.walletsTokens.find((t) => t.token.address === omni.address);
     const onchainToken = this.walletsTokens.find((t) => t.token.address === omni.originalAddress);
+
+    const reseve = onchainToken ? onchainToken.token.int(onchainToken.token.reserve) : 0n;
+    const available = onchainToken ? formatter.bigIntMax(0n, onchainToken.balance - reseve) : 0n;
+
     return {
       token: omni,
+      onchain: available,
       omni: omniToken?.balance ?? 0n,
-      onchain: onchainToken?.balance ?? 0n,
-      total: +omni.float((omniToken?.balance ?? 0n) + (onchainToken?.balance ?? 0n)).toFixed(6),
+      total: +omni.float((omniToken?.balance ?? 0n) + available).toFixed(6),
     };
   }
 

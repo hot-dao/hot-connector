@@ -377,14 +377,13 @@ export class Exchange {
     const recipientWallet = this.wibe3.wallets.find((w) => w.address === recipient.address);
     if (!recipientWallet) return await this.processing(review);
 
-    const beforeBalance = await this.wibe3.fetchToken(review.to, recipientWallet);
-    const result = await Promise.race([
+    const beforeBalance = await this.wibe3.fetchToken(review.to, recipientWallet).catch(() => null);
+    if (!beforeBalance) return await this.processing(review);
+
+    return await Promise.race([
       this.waitBalance(review.to, recipientWallet, beforeBalance, review),
       this.processing(review), //
     ]);
-
-    if (sender !== "qr") this.wibe3.fetchToken(review.to, sender);
-    return result;
   }
 
   async waitBalance(to: Token, wallet: OmniWallet, beforeBalance: bigint, review: BridgeReview): Promise<BridgeReview> {

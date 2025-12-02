@@ -253,7 +253,7 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: Brid
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <p style={{ fontWeight: "bold" }}>{from.chain === -4 ? "Withdraw omni from:" : "Send from:"}</p>
+              <p style={{ fontWeight: "bold" }}>{from.chain === -4 ? "Withdraw HEX from:" : "Send from:"}</p>
               <BadgeButton onClick={() => openSelectSender({ hot, type: from.type, onSelect: (wallet) => setSender(wallet) })}>
                 <p>{formatter.truncateAddress(sender === "qr" ? "QR code" : sender?.address ?? "Connect wallet")}</p>
               </BadgeButton>
@@ -346,7 +346,7 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: Brid
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <p style={{ fontWeight: "bold" }}>{to.chain !== -4 ? "To:" : "Deposit omni to:"}</p>
+              <p style={{ fontWeight: "bold" }}>{to.chain !== -4 ? "To:" : "Deposit HEX to:"}</p>
               <BadgeButton onClick={() => openSelectRecipient({ hot, recipient, type: to.type, onSelect: (recipient) => setRecipient(recipient) })}>
                 <p>{formatter.truncateAddress(recipient?.address ?? "Connect wallet")}</p>
               </BadgeButton>

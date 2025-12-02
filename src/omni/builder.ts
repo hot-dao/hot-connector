@@ -213,7 +213,7 @@ class IntentsBuilder {
     return this;
   }
 
-  async sign(requestToken: boolean = true) {
+  async sign(requestToken: boolean = false) {
     const signer = this.signer;
     if (!signer) throw new Error("No signer attached");
     if (!signer.omniAddress) throw new Error("No omni address");
