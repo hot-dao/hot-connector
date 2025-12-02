@@ -80,6 +80,20 @@ export const MultichainExample = () => {
               >
                 Sign auth_call
               </button>
+              <button
+                className={"input-button"}
+                onClick={async () => {
+                  try {
+                    const signed = await wallet.intents.tokenDiff({ [OmniToken.USDC]: -40 } as Record<OmniToken, number>).sign(true);
+                    setSignedIntent(JSON.stringify(signed, null, 2));
+                  } catch (e) {
+                    console.error(e);
+                    alert("Something wrong, check DevTools");
+                  }
+                }}
+              >
+                Sign token_diff
+              </button>
             </div>
           )
       )}
