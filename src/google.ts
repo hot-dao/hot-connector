@@ -33,18 +33,13 @@ class GoogleConnector extends OmniConnector<OmniWallet> {
     });
   }
 
-  createWallet(): Promise<OmniWallet> {
-    throw new Error("Method not implemented.");
-  }
-
   connectWallet(account: { type: number; address: string; publicKey: string }) {
     const request = requestWebWallet(account.type, account.address);
 
     if (account.type === WalletType.EVM) {
       this.setWallet(
-        new EvmWallet(this, {
-          address: account.address,
-          request: (args) => request("evm:request", args),
+        new EvmWallet(this, account.address, {
+          request: (args: any) => request("evm:request", args),
         })
       );
     }

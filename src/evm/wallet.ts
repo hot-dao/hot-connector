@@ -8,16 +8,17 @@ import { ReviewFee } from "../omni/fee";
 import { Token } from "../omni/token";
 import { erc20abi } from "./abi";
 
-interface EvmProvider {
-  address: string;
-  request?: (args: any) => Promise<any>;
+export interface EvmProvider {
+  request: (args: any) => Promise<any>;
+  on?: (method: string, handler: (args: any) => void) => void;
+  off?: (method: string, handler: (args: any) => void) => void;
 }
 
 class EvmWallet extends OmniWallet {
   readonly publicKey?: string;
   readonly type = WalletType.EVM;
 
-  constructor(readonly connector: OmniConnector, readonly provider: EvmProvider) {
+  constructor(readonly connector: OmniConnector, readonly address: string, readonly provider: EvmProvider) {
     super(connector);
   }
 
@@ -30,17 +31,13 @@ class EvmWallet extends OmniWallet {
     return rpc;
   }
 
-  get address() {
-    return this.provider.address;
-  }
-
   get omniAddress() {
     return this.address.toLowerCase();
   }
 
   async disconnect() {
-    super.disconnect();
-    this.provider.request?.({ method: "wallet_revokePermissions" });
+    this.provider.request?.({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] });
+    await super.disconnect();
   }
 
   async fetchBalances(chain: number, whitelist: string[]): Promise<Record<string, bigint>> {
