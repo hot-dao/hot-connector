@@ -91,11 +91,11 @@ export class Intents {
     };
 
     const intent: TokenDiffIntent = {
-      token_diff: Object.fromEntries(Object.entries(args).map(([token, amount]) => parse(token as OmniToken, amount))),
+      diff: Object.fromEntries(Object.entries(args).map(([token, amount]) => parse(token as OmniToken, amount))),
       intent: "token_diff",
     };
 
-    for (const [token, amountStr] of Object.entries(intent.token_diff)) {
+    for (const [token, amountStr] of Object.entries(intent.diff)) {
       const amount = BigInt(amountStr);
       if (amount < 0n) {
         const tokenKey = token as OmniToken;
@@ -105,6 +105,106 @@ export class Intents {
 
     this.intents.push(intent);
     return this;
+  }
+
+  addRawIntent(rawIntent: Record<string, any>) {
+    if (!rawIntent.intent) throw new Error("Intent must have 'intent' field");
+    const intentType = rawIntent.intent;
+
+    if (intentType === "token_diff") {
+      const diff = rawIntent.diff || rawIntent.token_diff;
+      if (!diff) throw new Error("token_diff intent must have 'diff' or 'token_diff' field");
+      const tokenDiffArgs: Record<OmniToken, bigint> = {} as Record<OmniToken, bigint>;
+
+      for (const [token, amountStr] of Object.entries(diff)) {
+        tokenDiffArgs[token as OmniToken] = BigInt(amountStr as string);
+      }
+
+      return this.tokenDiff(tokenDiffArgs);
+    }
+
+    if (intentType === "transfer") {
+      if (!rawIntent.tokens || !rawIntent.receiver_id) {
+        throw new Error("transfer intent must have 'tokens' and 'receiver_id' fields");
+      }
+
+      const tokenEntries = Object.entries(rawIntent.tokens);
+      if (tokenEntries.length === 1) {
+        const [token, amount] = tokenEntries[0];
+        return this.transfer({
+          tgas: rawIntent.min_gas ? Number(BigInt(rawIntent.min_gas) / TGAS) : undefined,
+          recipient: rawIntent.receiver_id,
+          token: token as OmniToken,
+          amount: BigInt(amount as string),
+          msg: rawIntent.msg,
+        });
+      }
+
+      const tokens: Record<OmniToken, bigint> = {} as Record<OmniToken, bigint>;
+      for (const [token, amount] of tokenEntries) {
+        tokens[token as OmniToken] = BigInt(amount as string);
+      }
+
+      return this.batchTransfer({
+        tgas: rawIntent.min_gas ? Number(BigInt(rawIntent.min_gas) / TGAS) : undefined,
+        recipient: rawIntent.receiver_id,
+        msg: rawIntent.msg,
+        tokens,
+      });
+    }
+
+    if (intentType === "mt_withdraw") {
+      if (!rawIntent.token || !rawIntent.receiver_id || !rawIntent.amounts || !rawIntent.token_ids) {
+        throw new Error("mt_withdraw intent must have 'token', 'receiver_id', 'amounts', and 'token_ids' fields");
+      }
+
+      const intent: MtWithdrawIntent = {
+        intent: "mt_withdraw",
+        amounts: rawIntent.amounts,
+        receiver_id: rawIntent.receiver_id,
+        token_ids: rawIntent.token_ids,
+        token: rawIntent.token,
+        memo: rawIntent.memo,
+        msg: rawIntent.msg,
+        min_gas: rawIntent.min_gas,
+      };
+
+      const totalAmount = rawIntent.amounts.reduce((sum: bigint, amt: string) => sum + BigInt(amt), 0n);
+      const token = `nep245:${rawIntent.token}` as OmniToken;
+      this.addNeed(token, totalAmount);
+      this.intents.push(intent);
+      return this;
+    }
+
+    if (intentType === "ft_withdraw") {
+      if (!rawIntent.token || !rawIntent.receiver_id || !rawIntent.amount) {
+        throw new Error("ft_withdraw intent must have 'token', 'receiver_id', and 'amount' fields");
+      }
+
+      const token = `nep141:${rawIntent.token}` as OmniToken;
+      return this.withdraw({
+        amount: BigInt(rawIntent.amount),
+        receiver: rawIntent.receiver_id,
+        memo: rawIntent.memo,
+        msg: rawIntent.msg,
+        token,
+      });
+    }
+
+    if (intentType === "auth_call") {
+      if (!rawIntent.contract_id || !rawIntent.msg || !rawIntent.attached_deposit || !rawIntent.min_gas) {
+        throw new Error("auth_call intent must have 'contract_id', 'msg', 'attached_deposit', and 'min_gas' fields");
+      }
+
+      return this.authCall({
+        contractId: rawIntent.contract_id,
+        msg: rawIntent.msg,
+        attachNear: BigInt(rawIntent.attached_deposit),
+        tgas: Number(BigInt(rawIntent.min_gas) / TGAS),
+      });
+    }
+
+    throw new Error(`Unsupported intent type: ${intentType}`);
   }
 
   withdraw(args: { token: OmniToken; amount: number | bigint; receiver: string; memo?: string; msg?: string; tgas?: number }) {
@@ -184,8 +284,8 @@ export class Intents {
     this.addNeed(token, intAmount);
     const tokenDiff = this.intents.find((intent) => intent.intent === "token_diff");
 
-    if (tokenDiff) tokenDiff.token_diff[token.toString()] = intAmount.toString();
-    else this.intents.push({ intent: "token_diff", token_diff: { [token.toString()]: intAmount.toString() } });
+    if (tokenDiff) tokenDiff.diff[token.toString()] = intAmount.toString();
+    else this.intents.push({ intent: "token_diff", diff: { [token.toString()]: intAmount.toString() } });
     return this;
   }
 
@@ -195,8 +295,8 @@ export class Intents {
     this.addNeed(token, -intAmount);
     const tokenDiff = this.intents.find((intent) => intent.intent === "token_diff");
 
-    if (tokenDiff) tokenDiff.token_diff[token.toString()] = (-intAmount).toString();
-    else this.intents.push({ intent: "token_diff", token_diff: { [token.toString()]: (-intAmount).toString() } });
+    if (tokenDiff) tokenDiff.diff[token.toString()] = (-intAmount).toString();
+    else this.intents.push({ intent: "token_diff", diff: { [token.toString()]: (-intAmount).toString() } });
     return this;
   }
 

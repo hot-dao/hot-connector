@@ -8,7 +8,7 @@ export interface TransferIntent {
 
 export interface TokenDiffIntent {
   intent: "token_diff";
-  token_diff: Record<string, string>;
+  diff: Record<string, string>;
 }
 
 export interface MtWithdrawIntent {
