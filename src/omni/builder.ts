@@ -183,6 +183,117 @@ class IntentsBuilder {
     throw new Error(`Unsupported token: ${args.token}`);
   }
 
+  addRaw(rawIntent: Record<string, any>) {
+    if (!rawIntent.intent) throw new Error("Intent must have 'intent' field");
+
+    const intentType = rawIntent.intent;
+
+    if (intentType === "token_diff") {
+      const diff = rawIntent.diff || rawIntent.token_diff;
+      if (!diff) throw new Error("token_diff intent must have 'diff' or 'token_diff' field");
+
+      const tokenDiffArgs: Record<OmniToken, bigint> = {} as Record<OmniToken, bigint>;
+      for (const [token, amountStr] of Object.entries(diff)) {
+        tokenDiffArgs[token as OmniToken] = BigInt(amountStr as string);
+      }
+      return this.tokenDiff(tokenDiffArgs);
+    }
+
+    if (intentType === "transfer") {
+      if (!rawIntent.tokens || !rawIntent.receiver_id) {
+        throw new Error("transfer intent must have 'tokens' and 'receiver_id' fields");
+      }
+
+      const tokenEntries = Object.entries(rawIntent.tokens);
+      if (tokenEntries.length === 1) {
+        const [token, amount] = tokenEntries[0];
+        return this.transfer({
+          recipient: rawIntent.receiver_id,
+          token: token as OmniToken,
+          amount: BigInt(amount as string),
+          msg: rawIntent.msg,
+          tgas: rawIntent.min_gas ? Number(BigInt(rawIntent.min_gas) / TGAS) : undefined,
+        });
+      } else {
+        const tokens: Record<OmniToken, bigint> = {} as Record<OmniToken, bigint>;
+        for (const [token, amount] of tokenEntries) {
+          tokens[token as OmniToken] = BigInt(amount as string);
+        }
+        return this.batchTransfer({
+          recipient: rawIntent.receiver_id,
+          tokens,
+          msg: rawIntent.msg,
+          tgas: rawIntent.min_gas ? Number(BigInt(rawIntent.min_gas) / TGAS) : undefined,
+        });
+      }
+    }
+
+    if (intentType === "mt_withdraw") {
+      if (!rawIntent.token || !rawIntent.receiver_id || !rawIntent.amounts || !rawIntent.token_ids) {
+        throw new Error("mt_withdraw intent must have 'token', 'receiver_id', 'amounts', and 'token_ids' fields");
+      }
+
+      if (rawIntent.amounts.length === 1 && rawIntent.token_ids.length === 1) {
+        const token = `nep245:${rawIntent.token}:${rawIntent.token_ids[0]}` as OmniToken;
+        return this.withdraw({
+          token,
+          amount: BigInt(rawIntent.amounts[0]),
+          receiver: rawIntent.receiver_id,
+          memo: rawIntent.memo,
+          msg: rawIntent.msg,
+          tgas: rawIntent.min_gas ? Number(BigInt(rawIntent.min_gas) / TGAS) : undefined,
+        });
+      }
+
+      const intent: MtWithdrawIntent = {
+        intent: "mt_withdraw",
+        amounts: rawIntent.amounts,
+        receiver_id: rawIntent.receiver_id,
+        token_ids: rawIntent.token_ids,
+        token: rawIntent.token,
+        memo: rawIntent.memo,
+        msg: rawIntent.msg,
+        min_gas: rawIntent.min_gas,
+      };
+
+      const totalAmount = rawIntent.amounts.reduce((sum: bigint, amt: string) => sum + BigInt(amt), 0n);
+      const token = `nep245:${rawIntent.token}` as OmniToken;
+      this.addNeed(token, totalAmount);
+      this.intents.push(intent);
+      return this;
+    }
+
+    if (intentType === "ft_withdraw") {
+      if (!rawIntent.token || !rawIntent.receiver_id || !rawIntent.amount) {
+        throw new Error("ft_withdraw intent must have 'token', 'receiver_id', and 'amount' fields");
+      }
+
+      const token = `nep141:${rawIntent.token}` as OmniToken;
+      return this.withdraw({
+        token,
+        amount: BigInt(rawIntent.amount),
+        receiver: rawIntent.receiver_id,
+        memo: rawIntent.memo,
+        msg: rawIntent.msg,
+      });
+    }
+
+    if (intentType === "auth_call") {
+      if (!rawIntent.contract_id || !rawIntent.msg || !rawIntent.attached_deposit || !rawIntent.min_gas) {
+        throw new Error("auth_call intent must have 'contract_id', 'msg', 'attached_deposit', and 'min_gas' fields");
+      }
+
+      return this.authCall({
+        contractId: rawIntent.contract_id,
+        msg: rawIntent.msg,
+        attachNear: BigInt(rawIntent.attached_deposit),
+        tgas: Number(BigInt(rawIntent.min_gas) / TGAS),
+      });
+    }
+
+    throw new Error(`Unsupported intent type: ${intentType}`);
+  }
+
   attachHashes(hashes: string[]) {
     this.hashes.push(...hashes);
     return this;
