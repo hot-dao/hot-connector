@@ -114,12 +114,11 @@ export class Intents {
     if (intentType === "token_diff") {
       const diff = rawIntent.diff || rawIntent.token_diff;
       if (!diff) throw new Error("token_diff intent must have 'diff' or 'token_diff' field");
-      const tokenDiffArgs: Record<OmniToken, bigint> = {} as Record<OmniToken, bigint>;
 
+      const tokenDiffArgs: Record<OmniToken, bigint> = {} as Record<OmniToken, bigint>;
       for (const [token, amountStr] of Object.entries(diff)) {
         tokenDiffArgs[token as OmniToken] = BigInt(amountStr as string);
       }
-
       return this.tokenDiff(tokenDiffArgs);
     }
 
@@ -128,36 +127,19 @@ export class Intents {
         throw new Error("transfer intent must have 'tokens' and 'receiver_id' fields");
       }
 
-      const tokenEntries = Object.entries(rawIntent.tokens);
-      if (tokenEntries.length === 1) {
-        const [token, amount] = tokenEntries[0];
-        return this.transfer({
-          tgas: rawIntent.min_gas ? Number(BigInt(rawIntent.min_gas) / TGAS) : undefined,
-          recipient: rawIntent.receiver_id,
-          token: token as OmniToken,
-          amount: BigInt(amount as string),
-          msg: rawIntent.msg,
-        });
-      }
-
       const tokens: Record<OmniToken, bigint> = {} as Record<OmniToken, bigint>;
-      for (const [token, amount] of tokenEntries) {
+      for (const [token, amount] of Object.entries(rawIntent.tokens)) {
         tokens[token as OmniToken] = BigInt(amount as string);
       }
-
       return this.batchTransfer({
-        tgas: rawIntent.min_gas ? Number(BigInt(rawIntent.min_gas) / TGAS) : undefined,
         recipient: rawIntent.receiver_id,
-        msg: rawIntent.msg,
         tokens,
+        msg: rawIntent.msg,
+        tgas: rawIntent.min_gas ? Number(BigInt(rawIntent.min_gas) / TGAS) : undefined,
       });
     }
 
     if (intentType === "mt_withdraw") {
-      if (!rawIntent.token || !rawIntent.receiver_id || !rawIntent.amounts || !rawIntent.token_ids) {
-        throw new Error("mt_withdraw intent must have 'token', 'receiver_id', 'amounts', and 'token_ids' fields");
-      }
-
       const intent: MtWithdrawIntent = {
         intent: "mt_withdraw",
         amounts: rawIntent.amounts,
@@ -169,9 +151,11 @@ export class Intents {
         min_gas: rawIntent.min_gas,
       };
 
-      const totalAmount = rawIntent.amounts.reduce((sum: bigint, amt: string) => sum + BigInt(amt), 0n);
-      const token = `nep245:${rawIntent.token}` as OmniToken;
-      this.addNeed(token, totalAmount);
+      for (let i = 0; i < rawIntent.amounts.length; i++) {
+        const token = `nep245:${rawIntent.token}:${rawIntent.token_ids[i]}` as OmniToken;
+        this.addNeed(token, BigInt(rawIntent.amounts[i]));
+      }
+
       this.intents.push(intent);
       return this;
     }
