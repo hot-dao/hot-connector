@@ -5,16 +5,18 @@ import { useEffect } from "react";
 import { LogoutIcon } from "../icons/logout";
 import { openBridge, openConnector } from "../router";
 import { HotConnector } from "../../HotConnector";
-import { formatter } from "../../omni/token";
+import { formatter } from "../../omni/utils";
 import { OmniToken } from "../../omni/config";
-import { ImageView, TokenCard } from "./TokenCard";
+import { tokens } from "../../omni/tokens";
 import Popup from "../Popup";
+
+import { ImageView, TokenCard } from "./TokenCard";
 
 export const Profile = observer(({ hot, onClose }: { hot: HotConnector; onClose: () => void }) => {
   let totalBalance = 0;
   const tokensList = hot.wallets
     .flatMap((wallet) => {
-      return hot.tokens.map((token) => ({ token, wallet, balance: hot.balance(wallet, token) }));
+      return tokens.list.map((token) => ({ token, wallet, balance: hot.balance(wallet, token) }));
     })
     .sort((a, b) => {
       const balanceA = a.token.float(a.balance) * a.token.usd;

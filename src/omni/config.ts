@@ -1,6 +1,3 @@
-import { HotBridge } from "@hot-labs/omni-sdk";
-import { Intents } from "./Intents";
-
 export enum OmniToken {
   USDT = "nep141:usdt.tether-token.near",
   USDC = "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
@@ -10,6 +7,7 @@ export enum OmniToken {
   AURORA = "nep141:aaaaaa20d9e0e2461697782ef11675f668207961.factory.bridge.near",
   SOL = "nep141:sol.omft.near",
   BNB = "nep245:v2_1.omni.hot.tg:56_11111111111111111111",
+  ADI = "nep245:v2_1.omni.hot.tg:36900_11111111111111111111",
 }
 
 export enum WalletType {
@@ -51,6 +49,7 @@ export enum Network {
   Juno = 4444118,
   Gonka = 4444119,
   OmniTon = 1117,
+  ADI = 36900,
 
   Eth = 1,
   Tron = 333,
@@ -125,36 +124,7 @@ export const chainsMap: Record<number, { id: string; name: string; logo?: string
   [Network.Hot]: { id: "hot", name: "Omni", logo: "https://tgapp.herewallet.app/images/hot/hot-icon.png" },
   [Network.Cardano]: { id: "cardano", name: "Cardano", logo: "https://cryptologos.cc/logos/cardano-ada-logo.svg?v=040" },
   [Network.Litecoin]: { id: "ltc", name: "Litecoin", logo: "https://cryptologos.cc/logos/litecoin-ltc-logo.svg?v=040" },
+  [Network.ADI]: { id: "adi", name: "ADI" },
 };
 
 export const reverseChainsMap = Object.fromEntries(Object.entries(chainsMap).map(([key, value]) => [value.id, +key]));
-
-export const bridge = new HotBridge({
-  api: ["https://dev.herewallet.app"],
-  solanaRpc: ["https://api0.herewallet.app/api/v1/solana/rpc/1001"],
-
-  publishIntents: async (signed: Record<string, any>[], hashes: string[] = []) => {
-    const hash = await Intents.publishSignedIntents(signed, hashes);
-    return { sender: "intents.near", hash };
-  },
-
-  logger: console,
-  cosmos: {
-    [Network.Juno]: {
-      contract: "juno1va9q7gma6l62aqq988gghv4r7u4hnlgm85ssmsdf9ypw77qfwa0qaz7ea4",
-      rpc: "https://juno-rpc.publicnode.com",
-      gasLimit: 200000n,
-      nativeToken: "ujuno",
-      chainId: "juno-1",
-      prefix: "juno",
-    },
-    [Network.Gonka]: {
-      contract: "gonka15wng2302rhq5w8ddy3l3jslrhfcpufzfs6wc3zc6cxt8cpwrfp4qqgenkc",
-      rpc: "https://dev.herewallet.app/api/v1/evm/rpc/4444119",
-      gasLimit: 200000n,
-      nativeToken: "ngonka",
-      chainId: "gonka-mainnet",
-      prefix: "gonka",
-    },
-  },
-});

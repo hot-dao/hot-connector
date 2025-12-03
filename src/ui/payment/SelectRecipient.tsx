@@ -4,12 +4,12 @@ import { useState } from "react";
 
 import { ArrowRightIcon } from "../icons/arrow-right";
 import { PopupOption, PopupOptionInfo } from "../styles";
-import { ConnectorType, OmniConnector } from "../../omni/OmniConnector";
+import { ConnectorType, OmniConnector } from "../../OmniConnector";
 import { HotConnector } from "../../HotConnector";
 import { Recipient } from "../../omni/recipient";
 import { WalletType } from "../../omni/config";
 import { openWalletPicker } from "../router";
-import { formatter } from "../../omni/token";
+import { formatter } from "../../omni/utils";
 import Popup from "../Popup";
 
 import { ImageView } from "./TokenCard";

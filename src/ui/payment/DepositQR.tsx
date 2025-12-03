@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import QRCodeStyling from "qr-code-styling";
 import { observer } from "mobx-react-lite";
-
-import { BridgeReview } from "../../omni/exchange";
-import { PopupButton } from "../styles";
 import styled from "styled-components";
+
+import { BridgeReview } from "../../exchange";
+import { PopupButton } from "../styles";
 
 const DepositQR = observer(({ review, onConfirm, onCancel }: { review: BridgeReview; onConfirm: () => void; onCancel: () => void }) => {
   const qrCodeRef = useRef<HTMLDivElement>(null);

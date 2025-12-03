@@ -1,9 +1,10 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 
-import { formatter, Token } from "../../omni/token";
+import { formatter } from "../../omni/utils";
+import { Token } from "../../omni/token";
 import { HotConnector } from "../../HotConnector";
-import { OmniWallet } from "../../omni/OmniWallet";
+import { OmniWallet } from "../../OmniWallet";
 import { PopupOption } from "../styles";
 import { chainsMap } from "../../omni/config";
 
@@ -60,7 +61,7 @@ export const TokenIcon = observer(({ token, wallet }: { token: Token; wallet?: O
   );
 });
 
-export const TokenCard = observer(({ token, onSelect, hot, wallet, control }: { token: Token; onSelect: (token: Token, wallet?: OmniWallet) => void; hot: HotConnector; wallet?: OmniWallet; control?: React.ReactNode }) => {
+export const TokenCard = observer(({ token, onSelect, hot, wallet }: { token: Token; onSelect: (token: Token, wallet?: OmniWallet) => void; hot: HotConnector; wallet?: OmniWallet }) => {
   const balance = hot.balance(wallet, token);
   const symbol = token.chain === -4 && !token.isMainOmni ? `${token.originalChainSymbol}_${token.symbol}` : token.symbol;
 
@@ -77,8 +78,6 @@ export const TokenCard = observer(({ token, onSelect, hot, wallet, control }: { 
         <p style={{ textAlign: "right", fontSize: 20 }}>{token.readable(balance)}</p>
         <p style={{ textAlign: "right", fontSize: 14, color: "#c6c6c6" }}>${token.readable(balance, token.usd)}</p>
       </div>
-
-      {control}
     </PopupOption>
   );
 });

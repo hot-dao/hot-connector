@@ -2,12 +2,12 @@ import { NearWalletBase, SignMessageParams, SignedMessage, SignAndSendTransactio
 import { base64, base58, hex } from "@scure/base";
 import { Action } from "@near-js/transactions";
 
-import { OmniConnector } from "../omni/OmniConnector";
-import { OmniWallet } from "../omni/OmniWallet";
+import { OmniConnector } from "../OmniConnector";
+import { OmniWallet } from "../OmniWallet";
 import { WalletType } from "../omni/config";
-import { ReviewFee } from "../omni/fee";
+import { ReviewFee } from "../omni/bridge";
+import { rpc, TGAS } from "../omni/nearRpc";
 import { Token } from "../omni/token";
-import { rpc, TGAS } from "./rpc";
 
 export default class NearWallet extends OmniWallet {
   readonly type = WalletType.NEAR;
@@ -99,26 +99,6 @@ export default class NearWallet extends OmniWallet {
       },
       depositAction,
     ];
-  }
-
-  async depositToOmni(amount: bigint, ft: string, receiver?: string) {
-    let depositWnear: any[] = [];
-    if (ft === "native") depositWnear = await this.getWrapNearDepositAction(amount, this.address);
-    const token = ft === "native" ? "wrap.near" : ft;
-    const actions = [
-      ...depositWnear,
-      {
-        type: "FunctionCall",
-        params: {
-          methodName: "ft_transfer_call",
-          args: { amount: String(amount), receiver_id: "intents.near", msg: receiver || this.omniAddress },
-          gas: String(80n * TGAS),
-          deposit: String(1n),
-        },
-      },
-    ];
-
-    return await this.sendTransaction({ actions, receiverId: token });
   }
 
   async needRegisterToken(token: string, address: string): Promise<boolean> {

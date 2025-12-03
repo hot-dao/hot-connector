@@ -5,7 +5,7 @@ import { hex } from "@scure/base";
 
 import { WalletType } from "../omni/config";
 import { HotConnector } from "../HotConnector";
-import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
+import { ConnectorType, OmniConnector } from "../OmniConnector";
 import CosmosWallet from "./wallet";
 
 export interface CosmosConnectorOptions {

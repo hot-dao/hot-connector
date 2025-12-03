@@ -2,8 +2,8 @@ import { useState } from "react";
 import { observer } from "mobx-react-lite";
 
 import { ImageView } from "../payment/TokenCard";
-import { OmniWallet } from "../../omni/OmniWallet";
-import { OmniConnector, OmniConnectorOption } from "../../omni/OmniConnector";
+import { OmniWallet } from "../../OmniWallet";
+import { OmniConnector, OmniConnectorOption } from "../../OmniConnector";
 import { PopupButton, PopupOption, PopupOptionInfo } from "../styles";
 import Popup from "../Popup";
 

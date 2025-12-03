@@ -1,11 +1,11 @@
 import { makeObservable, observable, runInAction } from "mobx";
 
-import { EventEmitter } from "../events";
-import { LocalStorage } from "../storage";
-import { HotConnector } from "../HotConnector";
+import { EventEmitter } from "./events";
+import { LocalStorage } from "./storage";
+import { HotConnector } from "./HotConnector";
 
 import { OmniWallet } from "./OmniWallet";
-import { WalletType } from "./config";
+import { WalletType } from "./omni/config";
 
 export enum ConnectorType {
   WALLET = "wallet",

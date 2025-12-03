@@ -35,6 +35,8 @@ export default defineConfig({
 ## Getting started
 
 ```ts
+import { HotConnector } from "@hot-labs/wibe3";
+
 const connector = new HotConnector({
   // optional for WalletConnect
   projectId: "1292473190ce7eb75c9de67e15aaad99",
@@ -49,4 +51,17 @@ const connector = new HotConnector({
 
 connector.onConnect(({ wallet }) => {});
 connector.onDisconnect(({ wallet }) => {});
+```
+
+## Server side usage
+
+```ts
+import { Intents, OmniToken } from "@hot-labs/wibe3/server";
+
+await Intents.builder //
+  .give(OmniToken.USDT, 1)
+  .take(OmniToken.USDC, 1)
+  .attachCommitment(signedCommitment)
+  .attachSigner({ ed25519PrivateKey: Buffer }) // omniAddress as optional, default use hex of public key
+  .execute(); // or sign or simulate
 ```

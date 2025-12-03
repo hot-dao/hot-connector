@@ -1,19 +1,18 @@
 import { GetExecutionStatusResponse, OneClickService, ApiError, OpenAPI, QuoteRequest, QuoteResponse } from "@defuse-protocol/one-click-sdk-typescript";
-import { makeObservable, observable, runInAction } from "mobx";
 import { utils } from "@hot-labs/omni-sdk";
 import { hex } from "@scure/base";
 
-import NearWallet from "../near/wallet";
-import CosmosWallet from "../cosmos/wallet";
-import { HotConnector } from "../HotConnector";
-import StellarWallet from "../stellar/wallet";
+import NearWallet from "./near/wallet";
+import CosmosWallet from "./cosmos/wallet";
+import { HotConnector } from "./HotConnector";
+import StellarWallet from "./stellar/wallet";
 
-import { bridge, Network, OmniToken, WalletType } from "./config";
-import { Recipient } from "./recipient";
+import { Network, OmniToken, WalletType } from "./omni/config";
+import { Recipient } from "./omni/recipient";
 import { OmniWallet } from "./OmniWallet";
-import { defaultTokens } from "./list";
-import { ReviewFee } from "./fee";
-import { Token } from "./token";
+import { bridge, ReviewFee } from "./omni/bridge";
+import { tokens } from "./omni/tokens";
+import { Token } from "./omni/token";
 
 OpenAPI.BASE = "https://1click.chaindefuser.com";
 OpenAPI.TOKEN = "";
@@ -58,28 +57,12 @@ interface BridgeRequest {
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export class Exchange {
-  public tokens = defaultTokens.flatMap((t: any) => [new Token(t), new Token({ ...t, omni: true })]);
-
-  constructor(readonly wibe3: HotConnector) {
-    makeObservable(this, { tokens: observable });
-    this.startTokenPolling();
-  }
-
-  omni(id: OmniToken): Token {
-    return this.tokens.find((t) => t.address === id)!;
-  }
-
-  async startTokenPolling() {
-    await this.refreshTokens().catch(() => {});
-    await wait(10_000);
-    await this.startTokenPolling();
-  }
+  constructor(readonly wibe3: HotConnector) {}
 
   async getToken(chain: number, address: string): Promise<string | null> {
     if (chain === Network.Hot) return address;
-    const tokens = await this.getTokens();
-
-    const token = tokens.find((t) => {
+    const tokensList = await tokens.getTokens();
+    const token = tokensList.find((t) => {
       if (t.chain !== chain) return false;
       if (t.address?.toLowerCase() === address.toLowerCase()) return true;
       if (address === "native" && t.address == "native") return true;
@@ -138,30 +121,6 @@ export class Exchange {
       gasless: true,
       amount: amount,
     });
-  }
-
-  async refreshTokens() {
-    const list = await OneClickService.getTokens();
-    list.unshift({
-      blockchain: "gonka-mainnet" as any,
-      priceUpdatedAt: "2025-11-23T18:01:00.349Z",
-      assetId: OmniToken.GONKA,
-      contractAddress: "ngonka",
-      symbol: "GNK",
-      decimals: 9,
-      price: 0,
-    });
-
-    runInAction(() => {
-      this.tokens = list.flatMap((t) => [new Token(t), new Token({ ...t, omni: true })]);
-    });
-
-    return this.tokens;
-  }
-
-  async getTokens(): Promise<Token[]> {
-    if (this.tokens.length > 0) return this.tokens;
-    return this.refreshTokens();
   }
 
   async withdrawFee(request: BridgeRequest) {
@@ -319,7 +278,7 @@ export class Exchange {
       await this.withdraw({ sender, token: review.to, amount: review.amountIn, recipient });
       this.wibe3.fetchToken(review.from, sender);
 
-      const recipientWallet = sender.connector.wibe3.wallets.find((w) => w.address === recipient.address);
+      const recipientWallet = this.wibe3.wallets.find((w) => w.address === recipient.address);
       if (recipientWallet) this.wibe3.fetchToken(review.to, recipientWallet);
       return review;
     }
@@ -329,8 +288,8 @@ export class Exchange {
       await this.deposit({ sender, token: review.from, amount: review.amountIn, recipient, onMessage: pending.log });
       this.wibe3.fetchToken(review.from, sender);
 
-      const recipientWallet = sender.connector.wibe3.wallets.find((w) => w.address === recipient.address);
-      if (recipientWallet) sender.connector.wibe3.fetchToken(review.to, recipientWallet);
+      const recipientWallet = this.wibe3.wallets.find((w) => w.address === recipient.address);
+      if (recipientWallet) this.wibe3.fetchToken(review.to, recipientWallet);
       return review;
     }
 

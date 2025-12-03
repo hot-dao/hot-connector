@@ -1,12 +1,10 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 
-import { OmniToken, WalletType } from "./config";
-import { openAuthPopup } from "../ui/connect/AuthPopup";
+import { OmniToken, WalletType } from "./omni/config";
 import { OmniConnector } from "./OmniConnector";
-import IntentsBuilder from "./builder";
-import { Intents } from "./Intents";
-import { ReviewFee } from "./fee";
-import { Token } from "./token";
+import { Intents } from "./omni/Intents";
+import { ReviewFee } from "./omni/bridge";
+import { Token } from "./omni/token";
 
 export interface AuthCommitment {
   tradingAddress: string;
@@ -57,19 +55,12 @@ export abstract class OmniWallet {
   }
 
   get intents() {
-    return new IntentsBuilder(this.connector.wibe3).attachWallet(this);
+    return new Intents(this.connector.wibe3).attachWallet(this);
   }
 
   async pay({ token, amount, recipient, paymentId }: { token: OmniToken; amount: number; recipient: string; paymentId: string }) {
     const nonce = new Uint8Array(sha256(new TextEncoder().encode(paymentId))).slice(0, 32);
     return this.intents.attachNonce(nonce).transfer({ recipient, token, amount }).execute();
-  }
-
-  async auth<T = SignedAuth>(domain: string, intents?: Record<string, any>[], then?: (signed: SignedAuth) => Promise<T>): Promise<T> {
-    return openAuthPopup<T>(this, async () => {
-      const signed = await this.signIntentsWithAuth(domain, intents);
-      return (await then?.(signed)) ?? (signed as T);
-    });
   }
 
   async waitUntilBalance(need: Record<string, bigint>, receiver: string, attempts = 0) {

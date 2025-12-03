@@ -1,9 +1,9 @@
 import { StargateClient } from "@cosmjs/stargate";
 import { fromBech32, toBech32 } from "@cosmjs/encoding";
 
-import { OmniWallet, SignedAuth } from "../omni/OmniWallet";
+import { OmniWallet, SignedAuth } from "../OmniWallet";
 import { chainsMap, WalletType } from "../omni/config";
-import { ReviewFee } from "../omni/fee";
+import { ReviewFee } from "../omni/bridge";
 
 import CosmosConnector from "./connector";
 

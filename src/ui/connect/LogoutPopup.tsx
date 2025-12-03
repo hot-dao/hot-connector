@@ -1,7 +1,7 @@
 import { observer } from "mobx-react-lite";
 
 import Popup from "../Popup";
-import { OmniConnector } from "../../omni/OmniConnector";
+import { OmniConnector } from "../../OmniConnector";
 import { PopupButton } from "../styles";
 
 interface LogoutPopupProps {

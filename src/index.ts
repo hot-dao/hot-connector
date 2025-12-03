@@ -1,12 +1,12 @@
-export { bridge, Network, OmniToken, WalletType } from "./omni/config";
-export { formatter } from "./omni/token";
+export { Network, OmniToken, WalletType } from "./omni/config";
+export { formatter } from "./omni/utils";
+export { EventEmitter } from "./events";
 
-export { OmniWallet } from "./omni/OmniWallet";
-export { OmniConnector } from "./omni/OmniConnector";
+export { OmniWallet } from "./OmniWallet";
+export { OmniConnector } from "./OmniConnector";
 export { Intents } from "./omni/Intents";
-export { ReviewFee } from "./omni/fee";
 export { Token } from "./omni/token";
-export { TGAS } from "./near/rpc";
+export { TGAS } from "./omni/nearRpc";
 
 export { default as EvmConnector } from "./evm/connector";
 export { default as SolanaConnector } from "./solana/connector";

@@ -3,7 +3,7 @@ import { runInAction } from "mobx";
 
 import { WalletType } from "../omni/config";
 import { HotConnector } from "../HotConnector";
-import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
+import { ConnectorType, OmniConnector } from "../OmniConnector";
 import { isInjected } from "../hot-wallet/hot";
 import TonWallet from "./wallet";
 

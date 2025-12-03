@@ -4,12 +4,12 @@ import { QRIcon } from "../icons/qr";
 import { ArrowRightIcon } from "../icons/arrow-right";
 import { PopupOption, PopupOptionInfo } from "../styles";
 
-import { ConnectorType, OmniConnector } from "../../omni/OmniConnector";
-import { OmniWallet } from "../../omni/OmniWallet";
+import { ConnectorType, OmniConnector } from "../../OmniConnector";
+import { OmniWallet } from "../../OmniWallet";
 import { WalletType } from "../../omni/config";
 import { HotConnector } from "../../HotConnector";
 import { openWalletPicker } from "../router";
-import { formatter } from "../../omni/token";
+import { formatter } from "../../omni/utils";
 import Popup from "../Popup";
 
 import { ImageView } from "./TokenCard";

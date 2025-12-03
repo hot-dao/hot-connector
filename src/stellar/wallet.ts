@@ -3,11 +3,12 @@ import { Address, Asset, BASE_FEE, Claimant, Contract, Memo, nativeToScVal, Netw
 import { rpc } from "@stellar/stellar-sdk";
 
 import { WalletType } from "../omni/config";
-import { OmniWallet } from "../omni/OmniWallet";
-import { OmniConnector } from "../omni/OmniConnector";
-import { bridge, Network } from "../omni/config";
-import { formatter, Token } from "../omni/token";
-import { ReviewFee } from "../omni/fee";
+import { OmniWallet } from "../OmniWallet";
+import { OmniConnector } from "../OmniConnector";
+import { bridge, ReviewFee } from "../omni/bridge";
+import { formatter } from "../omni/utils";
+import { Network } from "../omni/config";
+import { Token } from "../omni/token";
 
 interface ProtocolWallet {
   signTransaction?: (transaction: Transaction) => Promise<{ signedTxXdr: string }>;

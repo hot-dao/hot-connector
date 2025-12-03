@@ -6,12 +6,14 @@ import uuid4 from "uuid4";
 import { SwitchIcon } from "../icons/switch";
 import { ArrowRightIcon } from "../icons/arrow-right";
 
+import { formatter } from "../../omni/utils";
+import { tokens } from "../../omni/tokens";
 import { Recipient } from "../../omni/recipient";
-import { OmniWallet } from "../../omni/OmniWallet";
-import { formatter, Token } from "../../omni/token";
-import { BridgeReview } from "../../omni/exchange";
+import { OmniWallet } from "../../OmniWallet";
+import { BridgeReview } from "../../exchange";
 import { HotConnector } from "../../HotConnector";
 import { WalletType } from "../../omni/config";
+import { Token } from "../../omni/token";
 
 import Popup from "../Popup";
 import { PopupButton } from "../styles";
@@ -45,8 +47,8 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: Brid
   const [isFiat, setIsFiat] = useState(false);
   const [type, setType] = useState<"exactIn" | "exactOut">(setup?.type || "exactIn");
   const [value, setValue] = useState<string>(setup?.amount?.toString() ?? "");
-  const [from, setFrom] = useState<Token>(setup?.from || hot.tokens.find((t) => t.id === localStorage.getItem("bridge:from")) || hot.tokens.find((t) => t.symbol === "NEAR")!);
-  const [to, setTo] = useState<Token>(setup?.to || hot.tokens.find((t) => t.id === localStorage.getItem("bridge:to")) || hot.tokens.find((t) => t.symbol === "USDT")!);
+  const [from, setFrom] = useState<Token>(setup?.from || tokens.list.find((t) => t.id === localStorage.getItem("bridge:from")) || tokens.list.find((t) => t.symbol === "NEAR")!);
+  const [to, setTo] = useState<Token>(setup?.to || tokens.list.find((t) => t.id === localStorage.getItem("bridge:to")) || tokens.list.find((t) => t.symbol === "USDT")!);
 
   const [review, setReview] = useState<BridgeReview | null>(null);
   const [isError, setIsError] = useState<string | null>(null);

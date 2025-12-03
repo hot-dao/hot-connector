@@ -2,9 +2,9 @@ import UniversalProvider from "@walletconnect/universal-provider";
 import { Wallet } from "@wallet-standard/base";
 import { runInAction } from "mobx";
 
-import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
+import { ConnectorType, OmniConnector } from "../OmniConnector";
 import { HotConnector } from "../HotConnector";
-import { OmniWallet } from "../omni/OmniWallet";
+import { OmniWallet } from "../OmniWallet";
 import { isInjected } from "../hot-wallet/hot";
 import { WalletType } from "../omni/config";
 

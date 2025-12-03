@@ -1,6 +1,6 @@
 import { JsonRpcProvider } from "@near-js/providers";
 import { getErrorTypeFromErrorMessage, parseRpcError } from "@near-js/utils";
-import { TypedError } from "@near-js/types";
+import { TypedError, FinalExecutionOutcome } from "@near-js/types";
 
 let _nextId = 123;
 
@@ -54,47 +54,6 @@ export class NearRpc extends JsonRpcProvider {
     });
 
     return JSON.parse(Buffer.from(data.result).toString("utf8"));
-  }
-
-  async checkCollectionExists(contractId: string): Promise<boolean> {
-    try {
-      await this.viewMethod({
-        contractId,
-        methodName: "nft_metadata",
-        args: {},
-      });
-      return true;
-    } catch (error: any) {
-      if (
-        error.type === "MethodNotFound" ||
-        error.type === "AccountDoesNotExist" ||
-        error.message?.includes("does not exist") ||
-        error.message?.includes("MethodNotFound")
-      ) {
-        return false;
-      }
-      throw error;
-    }
-  }
-
-  async getCollectionMetadata(contractId: string) {
-    try {
-      return await this.viewMethod({
-        contractId,
-        methodName: "nft_metadata",
-        args: {},
-      });
-    } catch (error: any) {
-      if (
-        error.type === "MethodNotFound" ||
-        error.type === "AccountDoesNotExist" ||
-        error.message?.includes("does not exist") ||
-        error.message?.includes("MethodNotFound")
-      ) {
-        return null;
-      }
-      throw error;
-    }
   }
 
   async sendJsonRpc<T>(method: string, params: any, attempts = 0): Promise<T> {
@@ -183,6 +142,46 @@ export class NearRpc extends JsonRpcProvider {
 
     return response.result;
   }
+
+  async hasNearAccount(accountId: string): Promise<boolean> {
+    const keys = await rpc.viewAccessKeyList(accountId);
+    return keys.keys.length > 0;
+  }
+
+  parseReceipts = (logs: FinalExecutionOutcome) => {
+    const errors: any[] = [];
+
+    logs.receipts_outcome?.forEach((t) => {
+      const status = t.outcome.status;
+      if (typeof status === "string" && status === "Failure") errors.push(status);
+      else if (typeof status === "object" && "Failure" in status) errors.push(status.Failure);
+    });
+
+    if (errors.length > 0) {
+      const ExecutionError = errors[0]?.ActionError?.kind?.FunctionCallError?.ExecutionError;
+      if (ExecutionError) throw ExecutionError;
+      const err = JSON.stringify(errors, null, 2);
+      throw new Error(err);
+    }
+
+    return logs;
+  };
+
+  waitTransactionResult = async (txHash: string, accountId: string, attemps = 0, signal?: AbortSignal, total = 30): Promise<FinalExecutionOutcome> => {
+    if (signal?.aborted) throw new Error("Aborted");
+    if (attemps > total) throw new Error("Transaction not found");
+
+    const options = { tx_hash: txHash, sender_account_id: accountId, wait_until: "EXECUTED" };
+    const logs: any = await rpc.sendJsonRpc("EXPERIMENTAL_tx_status", options).catch(() => null);
+    if (signal?.aborted) throw new Error("Aborted");
+
+    if (logs == null || logs.status === "NotStarted" || logs.transaction == null) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return await this.waitTransactionResult(txHash, accountId, attemps + 1, signal);
+    }
+
+    return this.parseReceipts(logs);
+  };
 }
 
 export const rpc = new NearRpc();

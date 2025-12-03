@@ -4,12 +4,13 @@ import { JettonVerificationType } from "@ton-api/client";
 import { toUserFriendlyAddress } from "@tonconnect/ui";
 import { base58, base64, hex } from "@scure/base";
 
-import { OmniWallet } from "../omni/OmniWallet";
+import { OmniWallet } from "../OmniWallet";
 import { WalletType } from "../omni/config";
-import { createJettonTransferMsgParams, tonApi } from "./utils";
-import { OmniConnector } from "../omni/OmniConnector";
-import { ReviewFee } from "../omni/fee";
+import { OmniConnector } from "../OmniConnector";
+import { ReviewFee } from "../omni/bridge";
 import { Token } from "../omni/token";
+
+import { createJettonTransferMsgParams, tonApi } from "./utils";
 
 interface ProtocolWallet {
   sendTransaction?: (params: SendTransactionRequest) => Promise<unknown>;

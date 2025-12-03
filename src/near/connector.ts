@@ -2,9 +2,8 @@ import { NearConnector } from "@hot-labs/near-connect";
 import { runInAction } from "mobx";
 
 import { WalletType } from "../omni/config";
-import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
+import { ConnectorType, OmniConnector } from "../OmniConnector";
 import { HotConnector } from "../HotConnector";
-import { OmniWallet } from "../omni/OmniWallet";
 import NearWallet from "./wallet";
 
 export interface NearConnectorOptions {
@@ -52,10 +51,6 @@ class Connector extends OmniConnector<NearWallet> {
         }));
       });
     });
-  }
-
-  async createWallet(address: string): Promise<OmniWallet> {
-    return new NearWallet(this, address, "");
   }
 
   async connect(id: string) {

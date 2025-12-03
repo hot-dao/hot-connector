@@ -2,14 +2,16 @@ import { useState } from "react";
 import { observer } from "mobx-react-lite";
 import styled from "styled-components";
 
-import { formatter, Token } from "../../omni/token";
+import { formatter } from "../../omni/utils";
+import { Token } from "../../omni/token";
 import { HotConnector } from "../../HotConnector";
-import { OmniWallet } from "../../omni/OmniWallet";
-import { OmniToken } from "../../omni/config";
+import { OmniWallet } from "../../OmniWallet";
+import { Network, OmniToken } from "../../omni/config";
 import { PopupOption } from "../styles";
 import Popup from "../Popup";
 
 import { TokenCard, ImageView } from "./TokenCard";
+import { tokens } from "../../omni/tokens";
 
 interface SelectTokenPopupProps {
   hot: HotConnector;
@@ -24,7 +26,7 @@ export const SelectTokenPopup = observer(({ hot, initialChain, onClose, onSelect
 
   if (chain == null) {
     const chains: Record<number, { chain: number; balance: number; name: string; icon: string }> = {};
-    hot.tokens.forEach((token) => {
+    tokens.list.forEach((token) => {
       if (!chains[token.chain])
         chains[token.chain] = {
           chain: token.chain,
@@ -39,7 +41,10 @@ export const SelectTokenPopup = observer(({ hot, initialChain, onClose, onSelect
       });
     });
 
-    const sorted = Object.values(chains).sort((a, b) => b.balance - a.balance);
+    const sorted = Object.values(chains).sort((a, b) => {
+      if (a.chain === Network.Hot) return -1;
+      return b.balance - a.balance;
+    });
 
     return (
       <Popup onClose={onClose} header={<p>Select chain</p>} style={{ minHeight: 300 }}>
@@ -65,7 +70,7 @@ export const SelectTokenPopup = observer(({ hot, initialChain, onClose, onSelect
       <Popup onClose={onClose} header={<p>Select token</p>} style={{ minHeight: 300 }}>
         <SearchInput type="text" placeholder="Search token" onChange={(e) => setSearch(e.target.value)} />
 
-        {hot.tokens
+        {tokens.list
           .filter((token) => token.chain === chain)
           .sort((a, b) => {
             const wallet = hot.wallets.find((w) => w.type === a.type)!;
@@ -82,21 +87,31 @@ export const SelectTokenPopup = observer(({ hot, initialChain, onClose, onSelect
     );
   }
 
-  const wallet = hot.priorityWallet;
+  let used = new Set<string>();
   return (
     <Popup onClose={onClose} header={<p>Select token</p>}>
       <SearchInput type="text" placeholder="Search token" onChange={(e) => setSearch(e.target.value)} />
-      {Object.values(OmniToken)
-        .filter((token) => token.toLowerCase().includes(search.toLowerCase()))
+      {hot.walletsTokens
+        .filter(({ token, balance }) => {
+          if (token.chain !== Network.Hot) return false;
+          if (token.float(balance) < 0.0001) return false;
+          if (!token.symbol.toLowerCase().includes(search.toLowerCase())) return false;
+          used.add(token.address);
+          return true;
+        })
         .sort((a, b) => {
-          const aToken = hot.exchange.omni(a);
-          const bToken = hot.exchange.omni(b);
-          const aBalance = aToken.float(hot.balance(wallet, aToken)) * aToken.usd;
-          const bBalance = bToken.float(hot.balance(wallet, bToken)) * bToken.usd;
+          const aBalance = a.token.float(a.balance) * a.token.usd;
+          const bBalance = b.token.float(b.balance) * b.token.usd;
           return bBalance - aBalance;
         })
+        .map(({ token, wallet }) => (
+          <TokenCard key={token.id} token={token} onSelect={onSelect} hot={hot} wallet={wallet} />
+        ))}
+
+      {Object.values(OmniToken)
+        .filter((token) => !used.has(token))
         .map((token) => (
-          <TokenCard key={token} token={hot.exchange.omni(token)} onSelect={onSelect} hot={hot} wallet={wallet} />
+          <TokenCard key={token} token={hot.omni(token)} onSelect={onSelect} hot={hot} wallet={hot.priorityWallet} />
         ))}
     </Popup>
   );

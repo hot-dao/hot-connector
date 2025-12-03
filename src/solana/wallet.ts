@@ -14,11 +14,12 @@ import {
 } from "@solana/spl-token";
 
 import { Network, WalletType } from "../omni/config";
-import { OmniConnector } from "../omni/OmniConnector";
-import { OmniWallet } from "../omni/OmniWallet";
+import { OmniConnector } from "../OmniConnector";
+import { OmniWallet } from "../OmniWallet";
 
-import { formatter, Token } from "../omni/token";
-import { ReviewFee } from "../omni/fee";
+import { Token } from "../omni/token";
+import { formatter } from "../omni/utils";
+import { ReviewFee } from "../omni/bridge";
 
 import { ISolanaProtocolWallet } from "./protocol";
 

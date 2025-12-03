@@ -3,9 +3,9 @@ import { Transaction } from "@stellar/stellar-base";
 
 import { WalletType } from "../omni/config";
 import { HotConnector } from "../HotConnector";
-import { ConnectorType, OmniConnector } from "../omni/OmniConnector";
+import { ConnectorType, OmniConnector } from "../OmniConnector";
 import { isInjected } from "../hot-wallet/hot";
-import { OmniWallet } from "../omni/OmniWallet";
+import { OmniWallet } from "../OmniWallet";
 import StellarWallet from "./wallet";
 
 type StellarOption = ISupportedWallet & { name: string; icon: string; uuid: string; rdns: string; download?: string };
