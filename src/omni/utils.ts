@@ -148,12 +148,7 @@ export const formatter = {
   },
 
   amount(value: Value, decimals = 24) {
-    if (formatter.isBig(Number(value))) {
-      const num = formatter.readableBigParts(Number(value));
-      return `${num[0]}${num[1]}`;
-    }
-
-    const num = formatter.fixed(formatter.num(value), decimals);
+    const num = String(+formatter.num(value).toFixed(decimals));
     return formatter.formatNumberWithSubscriptZeros(num, 3, 0.0001);
   },
 

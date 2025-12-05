@@ -1,4 +1,5 @@
 import { makeObservable, observable, runInAction } from "mobx";
+import UniversalProvider, { NamespaceConfig } from "@walletconnect/universal-provider";
 
 import { EventEmitter } from "./events";
 import { LocalStorage } from "./storage";
@@ -17,11 +18,19 @@ export interface OmniConnectorOption {
   icon: string;
   id: string;
   download?: string;
+  type: "extension" | "external";
 }
 
-export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O extends OmniConnectorOption = OmniConnectorOption> {
+export interface OmniConnectorOptions {
+  projectId?: string;
+  metadata?: { name: string; description: string; url: string; icons: string[] };
+}
+
+export const WC_ICON = "https://raw.githubusercontent.com/WalletConnect/walletconnect-assets/refs/heads/master/Icon/Blue%20(Default)/Icon.svg";
+
+export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O = {}> {
   wallets: T[] = [];
-  options: O[] = [];
+  options: (O & OmniConnectorOption)[] = [];
 
   private storage = new LocalStorage();
   protected events = new EventEmitter<{
@@ -29,14 +38,50 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O extends
     disconnect: { wallet: T };
   }>();
 
-  constructor(readonly wibe3: HotConnector) {
+  protected wc: Promise<UniversalProvider> | null = null;
+
+  constructor(readonly wibe3: HotConnector, readonly settings?: OmniConnectorOptions) {
     makeObservable(this, {
       wallets: observable,
       options: observable,
     });
   }
 
-  abstract connect(id?: string): Promise<OmniWallet>;
+  async initWalletConnect() {
+    if (!this.settings?.projectId) throw new Error("Project ID is required");
+    if (this.wc) return this.wc;
+    this.wc = UniversalProvider.init({
+      relayUrl: "wss://relay.walletconnect.org",
+      projectId: this.settings?.projectId,
+      metadata: this.settings?.metadata,
+      customStoragePrefix: `wibe3:${this.id}`,
+      name: this.name,
+    });
+
+    return this.wc;
+  }
+
+  async connectWalletConnect(args: { deeplink?: string; onConnect: () => Promise<OmniWallet>; namespaces: NamespaceConfig }): Promise<{ qrcode: string; deeplink?: string; task: Promise<OmniWallet> }> {
+    const provider = await this.wc;
+    if (!provider) throw new Error("No provider found");
+
+    return new Promise((resolve) => {
+      const session = provider.connect({ namespaces: args.namespaces });
+      const handler = (uri: string) => {
+        provider.off("display_uri", handler);
+        resolve({ qrcode: uri, deeplink: `${args.deeplink || "wc://"}${encodeURIComponent(uri)}`, task: session.then(args.onConnect) });
+      };
+      provider.on("display_uri", handler);
+    });
+  }
+
+  async disconnectWalletConnect() {
+    const provider = await this.wc;
+    if (provider?.session) await provider.disconnect();
+    provider?.cleanupPendingPairings();
+  }
+
+  abstract connect(id?: string): Promise<OmniWallet | { qrcode: string; deeplink?: string; task: Promise<OmniWallet> }>;
 
   abstract walletTypes: WalletType[];
   abstract type: ConnectorType;
@@ -94,6 +139,7 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O extends
   }
 
   async disconnect() {
+    this.disconnectWalletConnect();
     this.removeStorage();
     this.removeWallet();
   }

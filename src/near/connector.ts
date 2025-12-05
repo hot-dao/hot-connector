@@ -48,6 +48,7 @@ class Connector extends OmniConnector<NearWallet> {
           name: w.manifest.name,
           icon: w.manifest.icon,
           id: w.manifest.id,
+          type: "external" as const,
         }));
       });
     });

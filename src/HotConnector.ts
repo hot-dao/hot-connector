@@ -1,15 +1,15 @@
 import { computed, makeObservable, observable, runInAction } from "mobx";
 
 import { openBridge, openConnector, openPayment, openProfile, openWalletPicker } from "./ui/router";
-import { OmniWallet, SignedAuth } from "./OmniWallet";
+import { ConnectorType, OmniConnector, OmniConnectorOptions } from "./OmniConnector";
 import { chainsMap, Network, WalletType } from "./omni/config";
+import { OmniWallet, SignedAuth } from "./OmniWallet";
 
-import { ConnectorType, OmniConnector } from "./OmniConnector";
 import NearConnector, { NearConnectorOptions } from "./near/connector";
 import EvmConnector, { EvmConnectorOptions } from "./evm/connector";
-import SolanaConnector, { SolanaConnectorOptions } from "./solana/connector";
 import CosmosConnector, { CosmosConnectorOptions } from "./cosmos/connector";
 import TonConnector, { TonConnectorOptions } from "./ton/connector";
+import SolanaConnector from "./solana/connector";
 import StellarConnector from "./stellar/connector";
 import GoogleConnector from "./GoogleConnector";
 
@@ -33,15 +33,15 @@ import { tokens } from "./omni/tokens";
 
 export const near = (options?: NearConnectorOptions) => (wibe3: HotConnector) => new NearConnector(wibe3, options);
 export const evm = (options?: EvmConnectorOptions) => (wibe3: HotConnector) => new EvmConnector(wibe3, options);
-export const solana = (options?: SolanaConnectorOptions) => (wibe3: HotConnector) => new SolanaConnector(wibe3, options);
+export const solana = (options?: OmniConnectorOptions) => (wibe3: HotConnector) => new SolanaConnector(wibe3, options);
 export const cosmos = (options?: CosmosConnectorOptions) => (wibe3: HotConnector) => new CosmosConnector(wibe3, options);
 export const ton = (options?: TonConnectorOptions) => (wibe3: HotConnector) => new TonConnector(wibe3, options);
 export const stellar = () => (wibe3: HotConnector) => new StellarConnector(wibe3);
 export const google = () => (wibe3: HotConnector) => new GoogleConnector(wibe3);
 
-interface HotConnectorOptions extends EvmConnectorOptions, SolanaConnectorOptions, TonConnectorOptions, NearConnectorOptions {
-  webWallet?: string;
+interface HotConnectorOptions extends EvmConnectorOptions, OmniConnectorOptions, TonConnectorOptions, NearConnectorOptions, CosmosConnectorOptions {
   connectors?: OmniConnector[];
+  webWallet?: string;
   tonApi?: string;
 }
 
@@ -59,9 +59,10 @@ export class HotConnector {
   constructor(options?: HotConnectorOptions) {
     makeObservable(this, {
       balances: observable,
-      tokens: computed,
       walletsTokens: computed,
       wallets: computed,
+      tokens: computed,
+
       near: computed,
       evm: computed,
       solana: computed,
@@ -71,7 +72,7 @@ export class HotConnector {
     });
 
     if (typeof window !== "undefined") {
-      this.connectors = [near(), evm(options), solana(options), stellar(), ton(options), cosmos()].map((t) => t(this));
+      this.connectors = [near(), evm(options), solana(options), stellar(), ton(options), cosmos(options)].map((t) => t(this));
     }
 
     GlobalSettings.webWallet = options?.webWallet ?? GlobalSettings.webWallet;

@@ -155,8 +155,7 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: Brid
       if (setup?.autoClose) onClose();
       return result;
     } catch (e) {
-      setProcessing({ status: "error", message: "Failed to sign transaction", review });
-      console.error("FAILED TO SIGN TRANSACTION", e);
+      setProcessing({ status: "error", message: e?.toString?.() ?? "Unknown error", review });
       throw e;
     }
   };

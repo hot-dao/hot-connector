@@ -1,68 +1,53 @@
-import UniversalProvider from "@walletconnect/universal-provider";
+import MetaMaskSDK from "@metamask/sdk";
 import { runInAction } from "mobx";
 
-import { WalletConnectPopup } from "../ui/connect/WCPopup";
-import { ConnectorType, OmniConnector } from "../OmniConnector";
+import { ConnectorType, OmniConnector, OmniConnectorOptions, WC_ICON } from "../OmniConnector";
 import { WalletType } from "../omni/config";
 import { isInjected } from "../hot-wallet/hot";
 import { HotConnector } from "../HotConnector";
 import EvmWallet, { EvmProvider } from "./wallet";
 
-export interface EvmConnectorOptions {
-  projectId?: string;
-  chains?: number[];
-  metadata?: {
-    name: string;
-    description: string;
-    url: string;
-    icons: string[];
-  };
-}
-
 const chains = [1, 10, 56, 137, 8453, 42161, 421613, 80001];
 
-class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider; name: string; icon: string; id: string; download?: string }> {
-  name = "EVM Wallet";
+export interface EvmConnectorOptions extends OmniConnectorOptions {
+  chains?: number[];
+}
+
+class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider }> {
   icon = "https://storage.herewallet.app/upload/06b43b164683c2cbfe9a9c0699f0953fd56f1f802035e7701ea10501d9e091c6.png";
-  type = ConnectorType.WALLET;
   walletTypes = [WalletType.EVM, WalletType.OMNI];
+  type = ConnectorType.WALLET;
+  name = "EVM Wallet";
+  chains = chains;
   id = "evm";
 
-  chains = [1, 10, 56, 137, 8453, 42161, 421613, 80001];
-  _walletconnectPopup: WalletConnectPopup | null = null;
-  walletConnectProvider?: Promise<UniversalProvider>;
+  MMSDK = new MetaMaskSDK({
+    dappMetadata: {
+      name: "Wibe3",
+      url: window.location.href,
+      // iconUrl: "https://mydapp.com/icon.png" // Optional
+    },
+  });
 
-  constructor(wibe3: HotConnector, options: EvmConnectorOptions = {}) {
-    super(wibe3);
+  constructor(wibe3: HotConnector, readonly settings: EvmConnectorOptions = {}) {
+    super(wibe3, settings);
 
-    if (options.chains) this.chains.push(...options.chains);
-
-    if (options.projectId) {
-      this.walletConnectProvider = UniversalProvider.init({
-        projectId: options.projectId,
-        metadata: options.metadata,
-        relayUrl: "wss://relay.walletconnect.org",
-      });
-
-      this.walletConnectProvider.then(async (provider) => {
-        provider.on("display_uri", (uri: string) => {
-          this._walletconnectPopup?.update({ uri });
-        });
-
-        const connected = await this.getConnectedWallet();
-        if (connected.type === "walletconnect") {
-          const address = provider.session?.namespaces.eip155?.accounts?.[0]?.split(":")[2];
-          if (address) this.setWallet(new EvmWallet(this, address, provider as unknown as EvmProvider));
-        }
-      });
-    }
+    if (settings.chains) this.chains.push(...settings.chains);
 
     window.addEventListener<any>("eip6963:announceProvider", async (provider) => {
       if (this.options.find((t) => t.name === provider.detail.info.name || t.id === provider.detail.info.uuid)) return;
 
       runInAction(() => {
         const info = provider.detail.info;
-        const wallet = { provider: provider.detail.provider, name: info.name, icon: info.icon, id: info.rdns, download: `https://${info.rdns.split(".").reverse().join(".")}` };
+        const wallet = {
+          download: `https://${info.rdns.split(".").reverse().join(".")}`,
+          provider: provider.detail.provider,
+          type: "extension" as const,
+          name: info.name,
+          icon: info.icon,
+          id: info.rdns,
+        };
+
         if (info.rdns === "org.hot-labs") this.options.unshift(wallet);
         else this.options.push(wallet);
       });
@@ -74,6 +59,39 @@ class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider; nam
     });
 
     window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+    this.initWalletConnect().then((wc) => {
+      this.options.unshift({
+        id: "walletconnect",
+        name: "WalletConnect",
+        icon: WC_ICON,
+        provider: {} as any,
+        type: "external",
+      });
+    });
+
+    this.wc?.then(async (wc) => {
+      const selected = await this.getConnectedWallet();
+      if (selected.id !== "walletconnect") return;
+      this.setupWalletConnect();
+    });
+  }
+
+  async setupWalletConnect(): Promise<EvmWallet> {
+    const wc = await this.wc;
+    if (!wc) {
+      this.disconnectWalletConnect();
+      throw new Error("WalletConnect not found");
+    }
+
+    const address = wc.session?.namespaces.eip155.accounts[0]?.split(":")[2];
+    if (!address) {
+      this.disconnectWalletConnect();
+      throw new Error("Account not found");
+    }
+
+    this.setStorage({ type: "walletconnect" });
+    return this.setWallet(new EvmWallet(this, address, wc));
   }
 
   async connectWallet(id: string, provider: EvmProvider) {
@@ -103,23 +121,10 @@ class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider; nam
     return await this.getStorage();
   }
 
-  async connectWalletConnect() {
-    this._walletconnectPopup = new WalletConnectPopup({
-      uri: "LOADING",
-      onReject: async () => {
-        const provider = await this.walletConnectProvider;
-        provider?.cleanupPendingPairings();
-        this._walletconnectPopup?.destroy();
-        this._walletconnectPopup = null;
-      },
-    });
-
-    this._walletconnectPopup.create();
-    const provider = await this.walletConnectProvider;
-    if (!provider) throw new Error("No provider found");
-
-    const session = await provider
-      ?.connect({
+  async connect(id: string) {
+    if (id === "walletconnect") {
+      return await this.connectWalletConnect({
+        onConnect: () => this.setupWalletConnect(),
         namespaces: {
           eip155: {
             methods: ["eth_sendTransaction", "eth_signTransaction", "eth_sign", "personal_sign", "eth_signTypedData"],
@@ -128,34 +133,14 @@ class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider; nam
             rpcMap: {},
           },
         },
-      })
-      .catch(() => null);
+      });
+    }
 
-    this._walletconnectPopup?.destroy();
-    this._walletconnectPopup = null;
-
-    const address = session?.namespaces.eip155?.accounts?.[0]?.split(":")[2];
-    if (!address) throw new Error("No address found");
-
-    this.setWallet(new EvmWallet(this, address, provider as unknown as EvmProvider));
-    this.setStorage({ type: "walletconnect" });
-  }
-
-  async connect(id: string) {
-    const walletConnectProvider = await this.walletConnectProvider;
-    if (walletConnectProvider?.session) await walletConnectProvider.disconnect();
-
-    walletConnectProvider?.cleanupPendingPairings();
+    this.disconnectWalletConnect();
     const wallet = this.options.find((t) => t.id === id);
     if (!wallet) throw new Error("Wallet not found");
 
     return await this.connectWallet(id, wallet.provider);
-  }
-
-  async disconnect() {
-    super.disconnect();
-    const provider = await this.walletConnectProvider;
-    provider?.disconnect().catch(() => {});
   }
 }
 

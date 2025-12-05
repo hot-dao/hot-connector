@@ -12,6 +12,10 @@ export const bridge = new HotBridge({
     return { sender: "intents.near", hash };
   },
 
+  evmRpc: {
+    [Network.ADI]: ["https://dev.herewallet.app/api/v1/evm/rpc/36900"],
+  },
+
   logger: console,
   cosmos: {
     [Network.Juno]: {

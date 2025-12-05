@@ -8,8 +8,7 @@ import { isInjected } from "../hot-wallet/hot";
 import { OmniWallet } from "../OmniWallet";
 import StellarWallet from "./wallet";
 
-type StellarOption = ISupportedWallet & { name: string; icon: string; uuid: string; rdns: string; download?: string };
-class StellarConnector extends OmniConnector<StellarWallet, StellarOption> {
+class StellarConnector extends OmniConnector<StellarWallet, ISupportedWallet> {
   stellarKit: StellarWalletsKit;
 
   icon = "https://storage.herewallet.app/upload/1469894e53ca248ac6adceb2194e6950a13a52d972beb378a20bce7815ba01a4.png";
@@ -24,8 +23,8 @@ class StellarConnector extends OmniConnector<StellarWallet, StellarOption> {
     this.stellarKit = stellarKit || new StellarWalletsKit({ network: WalletNetwork.PUBLIC, modules: isInjected() ? [new HotWalletModule()] : sep43Modules() });
     this.stellarKit.getSupportedWallets().then((wallets) => {
       const hot = wallets.find((w) => w.id === "hot-wallet");
-      this.options = wallets.filter((w) => w.id !== "hot-wallet").map((w) => ({ ...w, name: w.name, icon: w.icon, uuid: w.id, rdns: w.name, download: w.url }));
-      if (hot) this.options.unshift({ ...hot, name: hot.name, icon: hot.icon, uuid: hot.id, rdns: hot.name, download: hot.url });
+      this.options = wallets.filter((w) => w.id !== "hot-wallet").map((w) => ({ ...w, name: w.name, icon: w.icon, download: w.url, type: "external" as const, id: w.id }));
+      if (hot) this.options.unshift({ ...hot, name: hot.name, icon: hot.icon, download: hot.url, type: "external" as const, id: hot.id });
     });
 
     this.getConnectedWallet().then((data) => {

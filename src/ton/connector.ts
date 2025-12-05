@@ -85,7 +85,15 @@ class TonConnector extends OmniConnector<TonWallet> {
 
     tonConnect.connector.restoreConnection();
     tonConnect.getWallets().then((wallets) => {
-      runInAction(() => (this.options = wallets.map((w) => ({ name: w.name, icon: w.imageUrl, id: w.appName, download: w.aboutUrl }))));
+      runInAction(() => {
+        this.options = wallets.map((w) => ({
+          name: w.name,
+          icon: w.imageUrl,
+          id: w.appName,
+          download: w.aboutUrl,
+          type: "external" as const,
+        }));
+      });
     });
 
     const tcRoot = document.querySelector("#tc-widget-root");

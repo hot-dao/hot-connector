@@ -2,15 +2,16 @@ import { GetExecutionStatusResponse, OneClickService, ApiError, OpenAPI, QuoteRe
 import { utils } from "@hot-labs/omni-sdk";
 import { hex } from "@scure/base";
 
-import NearWallet from "./near/wallet";
 import CosmosWallet from "./cosmos/wallet";
-import { HotConnector } from "./HotConnector";
 import StellarWallet from "./stellar/wallet";
+import NearWallet from "./near/wallet";
+import EvmWallet from "./evm/wallet";
 
+import { HotConnector } from "./HotConnector";
 import { Network, OmniToken, WalletType } from "./omni/config";
+import { bridge, ReviewFee } from "./omni/bridge";
 import { Recipient } from "./omni/recipient";
 import { OmniWallet } from "./OmniWallet";
-import { bridge, ReviewFee } from "./omni/bridge";
 import { tokens } from "./omni/tokens";
 import { Token } from "./omni/token";
 
@@ -97,6 +98,25 @@ export class Exchange {
       return;
     }
 
+    if (token.type === WalletType.EVM && sender instanceof EvmWallet) {
+      const hash = await bridge.evm.deposit({
+        sendTransaction: async (tx) => sender.sendTransaction(token.chain, tx),
+        intentAccount: recipient.omniAddress,
+        sender: sender.address,
+        token: token.address,
+        chain: token.chain,
+        amount: amount,
+      });
+
+      if (!hash) throw new Error("Failed to deposit");
+      onMessage("Waiting for deposit");
+      const deposit = await bridge.waitPendingDeposit(token.chain, hash, recipient.omniAddress);
+      onMessage("Finishing deposit");
+      await bridge.finishDeposit(deposit);
+      onMessage("Deposit finished");
+      return;
+    }
+
     if (token.type === WalletType.NEAR && sender instanceof NearWallet) {
       return await bridge.near.deposit({
         sendTransaction: async (tx: any) => sender.sendTransaction(tx),
@@ -156,7 +176,7 @@ export class Exchange {
     if (!intentTo) throw new Error("Unsupported token");
 
     const deadlineTime = 20 * 60 * 1000;
-    const directChains = [Network.Near, Network.Juno, Network.Gonka];
+    const directChains = [Network.Near, Network.Juno, Network.Gonka, Network.ADI];
     const deadline = new Date(Date.now() + deadlineTime).toISOString();
     const noFee = from.symbol === to.symbol;
 
