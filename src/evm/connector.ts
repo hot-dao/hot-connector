@@ -61,13 +61,7 @@ class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider }> {
     window.dispatchEvent(new Event("eip6963:requestProvider"));
 
     this.initWalletConnect().then((wc) => {
-      this.options.unshift({
-        id: "walletconnect",
-        name: "WalletConnect",
-        icon: WC_ICON,
-        provider: {} as any,
-        type: "external",
-      });
+      this.options.unshift({ id: "walletconnect", name: "WalletConnect", icon: WC_ICON, provider: {} as any, type: "external" });
     });
 
     this.wc?.then(async (wc) => {
@@ -79,19 +73,17 @@ class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider }> {
 
   async setupWalletConnect(): Promise<EvmWallet> {
     const wc = await this.wc;
-    if (!wc) {
-      this.disconnectWalletConnect();
-      throw new Error("WalletConnect not found");
-    }
+    if (!wc) throw new Error("WalletConnect not found");
 
     const address = wc.session?.namespaces.eip155.accounts[0]?.split(":")[2];
-    if (!address) {
-      this.disconnectWalletConnect();
-      throw new Error("Account not found");
-    }
+    if (!address) throw new Error("Account not found");
 
     this.setStorage({ type: "walletconnect" });
-    return this.setWallet(new EvmWallet(this, address, wc));
+    return this.setWallet(
+      new EvmWallet(this, address, {
+        request: async (request: any) => this.requestWalletConnect<any>({ request }),
+      })
+    );
   }
 
   async connectWallet(id: string, provider: EvmProvider) {

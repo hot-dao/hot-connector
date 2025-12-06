@@ -4,6 +4,7 @@ import { BridgeReview } from "../exchange";
 import { Token } from "../omni/token";
 import { OmniWallet } from "../OmniWallet";
 import { WalletType } from "../omni/config";
+import { Recipient } from "../omni/recipient";
 
 import { present } from "./Popup";
 import { Payment } from "./payment/Payment";
@@ -16,7 +17,7 @@ import { BridgeProps } from "./payment/Bridge";
 import { Connector } from "./connect/ConnectWallet";
 import { SelectSender } from "./payment/SelectSender";
 import { SelectRecipient } from "./payment/SelectRecipient";
-import { Recipient } from "../omni/recipient";
+import { WCRequest } from "./connect/WCRequest";
 
 export const openPayment = (connector: HotConnector, token: Token, amount: bigint, recipient?: Recipient) => {
   return new Promise<Promise<BridgeReview>>((resolve, reject) => {
@@ -82,4 +83,10 @@ export const openSelectSender = (props: { hot: HotConnector; type: WalletType; o
 
 export const openSelectRecipient = (props: { hot: HotConnector; recipient?: Recipient; type: WalletType; onSelect: (wallet?: Recipient) => void }) => {
   present((close) => <SelectRecipient {...props} onClose={close} />);
+};
+
+export const openWCRequest = <T,>(args: { task: () => Promise<T>; deeplink?: string; name: string; icon: string; request: any }): Promise<T> => {
+  const taskPromise = args.task();
+  present((close) => <WCRequest deeplink={args.deeplink} name={args.name} icon={args.icon} onClose={close} task={taskPromise} />);
+  return taskPromise;
 };

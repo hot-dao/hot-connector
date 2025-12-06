@@ -7,7 +7,7 @@ import { Token } from "./token";
 
 class TokensStorage {
   public list = defaultTokens.flatMap((t: any) => [new Token(t), new Token({ ...t, omni: true })]);
-  private initialTokensLoader = this.refreshTokens();
+  private initialTokensLoader = this.refreshTokens().catch(() => {});
 
   constructor() {
     makeObservable(this, {

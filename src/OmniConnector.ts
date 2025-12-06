@@ -7,6 +7,7 @@ import { HotConnector } from "./HotConnector";
 
 import { OmniWallet } from "./OmniWallet";
 import { WalletType } from "./omni/config";
+import { openWCRequest } from "./ui/router";
 
 export enum ConnectorType {
   WALLET = "wallet",
@@ -79,6 +80,20 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O = {}> {
     const provider = await this.wc;
     if (provider?.session) await provider.disconnect();
     provider?.cleanupPendingPairings();
+  }
+
+  async requestWalletConnect<T>(args: { chain?: string; request: any; deeplink?: string; name?: string; icon?: string }): Promise<T> {
+    return openWCRequest<T>({
+      deeplink: args.deeplink,
+      name: args.name || "WalletConnect",
+      icon: args.icon || WC_ICON,
+      request: args.request,
+      task: async () => {
+        const wc = await this.wc;
+        if (!wc) throw new Error("No provider found");
+        return await wc.request<T>(args.request, args.chain);
+      },
+    });
   }
 
   abstract connect(id?: string): Promise<OmniWallet | { qrcode: string; deeplink?: string; task: Promise<OmniWallet> }>;

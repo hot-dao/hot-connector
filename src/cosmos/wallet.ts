@@ -1,10 +1,8 @@
 import { StargateClient } from "@cosmjs/stargate";
-import { fromBech32, toBech32 } from "@cosmjs/encoding";
 
 import { OmniWallet, SignedAuth } from "../OmniWallet";
 import { chainsMap, WalletType } from "../omni/config";
 import { ReviewFee } from "../omni/bridge";
-
 import CosmosConnector from "./connector";
 
 interface ProtocolWallet {
@@ -73,9 +71,7 @@ export default class CosmosWallet extends OmniWallet {
     const config = this.connector.getConfig(chainsMap[chain].id);
     if (!config) throw new Error("Config not found");
     const client = await StargateClient.connect(config.rpc);
-
-    const address = toBech32(config.prefix, fromBech32(this.address).data);
-    const balance = await client.getBalance(address, token);
+    const balance = await client.getBalance(this.address, token);
     return BigInt(balance.amount || 0);
   }
 }

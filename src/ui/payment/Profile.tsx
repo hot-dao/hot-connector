@@ -11,6 +11,7 @@ import { tokens } from "../../omni/tokens";
 import Popup from "../Popup";
 
 import { ImageView, TokenCard } from "./TokenCard";
+import ExchangeIcon from "../icons/exchange";
 
 export const Profile = observer(({ hot, onClose }: { hot: HotConnector; onClose: () => void }) => {
   let totalBalance = 0;
@@ -66,11 +67,11 @@ export const Profile = observer(({ hot, onClose }: { hot: HotConnector; onClose:
         )}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", width: "100%", gap: 24, marginTop: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", width: "100%", gap: 8, marginTop: 16 }}>
         <BalanceCard>${formatter.amount(totalBalance)}</BalanceCard>
-        <p style={{ color: "#d2d2d2", cursor: "pointer", fontSize: 24, display: "flex", alignItems: "center", gap: 4 }} onClick={() => (onClose(), openBridge(hot, { title: "Exchange" }))}>
-          Exchange
-        </p>
+        <ExchangeButton onClick={() => (onClose(), openBridge(hot, { title: "Exchange" }))}>
+          <ExchangeIcon size={32} strokeColor="#d2d2d2" />
+        </ExchangeButton>
       </div>
 
       {tokensList.filter((t) => t != null && t.chain === -4).length > 0 && (
@@ -90,6 +91,22 @@ export const Profile = observer(({ hot, onClose }: { hot: HotConnector; onClose:
     </Popup>
   );
 });
+
+const ExchangeButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  outline: none;
+  border: none;
+  background: transparent;
+  padding: 8px;
+  border-radius: 24px;
+  transition: background 0.2s ease-in-out;
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+`;
 
 const TokenCards = styled.div`
   display: flex;
