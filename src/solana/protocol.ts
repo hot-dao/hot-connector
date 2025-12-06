@@ -41,23 +41,7 @@ class SolanaProtocolWallet implements ISolanaProtocolWallet {
   async sendTransaction(transaction: Transaction | VersionedTransaction, connection: Connection, options?: any): Promise<string> {
     const account = await this.getAccount();
     const features = this.wallet.features as any;
-
-    /*
-    const signAndSend = features["solana:signAndSendTransaction"]?.signAndSendTransaction as SolanaSignAndSendTransactionMethod;
-
-    if (signAndSend) {
-      const results = await signAndSend({ account, chain: account.chains[0], transaction: transaction.serialize() });
-      console.log({ results });
-
-      const signature = typeof results[0] === "string" ? results[0] : results[0]?.signature ?? results[0];
-      return typeof signature === "string" ? signature : base58.encode(signature as Uint8Array);
-    }
-
-    */
-
     const signTx = features["solana:signTransaction"]?.signTransaction as SolanaSignTransactionMethod;
-    console.log({ signTx });
-
     const [signed] = await signTx({ account, chain: account.chains[0], transaction: transaction.serialize() });
     const signedTx = signed.signedTransaction as Transaction | VersionedTransaction | Uint8Array;
     const raw = signedTx instanceof Uint8Array ? signedTx : (signedTx as any).serialize();

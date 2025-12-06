@@ -1,4 +1,6 @@
 import { Wallet } from "@wallet-standard/base";
+import { Transaction, PublicKey, VersionedTransaction, Connection } from "@solana/web3.js";
+import { base58 } from "@scure/base";
 import { runInAction } from "mobx";
 
 import { ConnectorType, OmniConnector, OmniConnectorOptions, WC_ICON } from "../OmniConnector";
@@ -70,31 +72,40 @@ class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet }> {
     this.initWalletConnect().then(async (wc) => {
       this.options.unshift({ type: "external", download: "https://www.walletconnect.com/get", wallet: {} as Wallet, name: "WalletConnect", id: "walletconnect", icon: WC_ICON });
       const selected = await this.getConnectedWallet();
-      if (selected.id !== "walletconnect") return;
+      if (selected.type !== "walletconnect") return;
       this.setupWalletConnect();
     });
   }
 
   async setupWalletConnect(): Promise<SolanaWallet> {
     const wc = await this.wc;
-    if (!wc) {
-      this.disconnectWalletConnect();
-      throw new Error("WalletConnect not found");
-    }
+    if (!wc) throw new Error("WalletConnect not found");
 
-    const account = wc.session?.namespaces.solana.accounts[0];
-    if (!account) {
-      this.disconnectWalletConnect();
-      throw new Error("Account not found");
-    }
+    const account = wc.session?.namespaces.solana?.accounts[0]?.split(":")[2];
+    if (!account) throw new Error("Account not found");
 
     this.setStorage({ type: "walletconnect" });
     return this.setWallet(
       new SolanaWallet(this, {
         address: account,
-        sendTransaction: async (transaction: unknown, _: unknown, options?: unknown) => new Promise((resolve) => resolve("")),
-        signMessage: async (message: string) => new Uint8Array(),
-        disconnect: async () => {},
+        sendTransaction: async (tx: Transaction | VersionedTransaction, connection: Connection, options?: any) => {
+          const transaction = Buffer.from(tx.serialize()).toString("base64");
+          const { signature } = await this.requestWalletConnect<{ signature: string }>({
+            request: { params: { transaction, options }, method: "solana_signTransaction" },
+          });
+          tx.addSignature(new PublicKey(account), Buffer.from(base58.decode(signature)));
+          return await connection.sendRawTransaction(tx.serialize(), options);
+        },
+
+        signMessage: async (msg: string) => {
+          const message = base58.encode(Buffer.from(msg, "utf8"));
+          const { signature } = await this.requestWalletConnect<{ signature: string }>({
+            request: { method: "solana_signMessage", params: { message, pubkey: account } },
+          });
+          return base58.decode(signature);
+        },
+
+        disconnect: () => this.disconnectWalletConnect(),
       })
     );
   }
@@ -114,10 +125,9 @@ class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet }> {
         onConnect: () => this.setupWalletConnect(),
         namespaces: {
           solana: {
-            methods: ["solana_sendTransaction", "solana_signTransaction", "solana_sign", "solana_signMessage"],
-            events: ["chainChanged", "accountsChanged"],
-            chains: ["solana"],
-            rpcMap: {},
+            methods: ["solana_signTransaction", "solana_signMessage"],
+            chains: ["solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", "solana:4sGjMW1sUnHzSxGspuhpqLDx6wiyjNtZ"],
+            events: [],
           },
         },
       });
