@@ -610,6 +610,36 @@
     "@emurgo/cardano-serialization-lib-browser" "^13.2.0"
     "@emurgo/cardano-serialization-lib-nodejs" "13.2.0"
 
+"@hot-labs/kit@^1.0.33":
+  version "1.0.33"
+  resolved "https://registry.yarnpkg.com/@hot-labs/kit/-/kit-1.0.33.tgz#0801bcea42a74ea0486f029dc9656d9d3a660fa7"
+  integrity sha512-j5s0WZ0LSAs1ZSEZLTe0co84XFsADvkf/lLIHLVAJfSCaJrxKa50iSlD1QbYdAJ0oM8UlpbTC+XzSQqp5rGCSw==
+  dependencies:
+    "@cosmjs/stargate" "^0.37.0"
+    "@creit.tech/stellar-wallets-kit" "^1.9.1"
+    "@defuse-protocol/one-click-sdk-typescript" "^0.1.13"
+    "@hot-labs/near-connect" "^0.6.10"
+    "@hot-labs/omni-sdk" "^2.24.0"
+    "@keplr-wallet/proto-types" "^0.12.291"
+    "@keplr-wallet/provider-extension" "^0.12.291"
+    "@metamask/sdk" "^0.34.0"
+    "@near-js/crypto" "^2.3.3"
+    "@near-js/providers" "^2.5.1"
+    "@near-js/utils" "^2.2.4"
+    "@noble/hashes" "^2.0.1"
+    "@scure/base" "^2.0.0"
+    "@solana/spl-token" "^0.4.14"
+    "@ton-api/client" "^0.4.0"
+    "@ton/core" "^0.62.0"
+    "@ton/crypto" "^3.3.0"
+    "@tonconnect/ui" "^2.2.0"
+    "@walletconnect/universal-provider" "^2.23.0"
+    ethers "^6.15.0"
+    mobx "^6.15.0"
+    mobx-react-lite "^4.1.1"
+    qr-code-styling "^1.9.2"
+    styled-components "^6.1.19"
+
 "@hot-labs/near-connect@^0.6.10":
   version "0.6.11"
   resolved "https://registry.yarnpkg.com/@hot-labs/near-connect/-/near-connect-0.6.11.tgz#efb7c623f65059fca0e385c105ac049d7f05ee89"
@@ -640,36 +670,6 @@
     "@solana/spl-token" "0.4.13"
     "@solana/web3.js" "1.68.0"
     cosmjs-types "0.11.0"
-
-"@hot-labs/kit@^1.0.32":
-  version "1.0.32"
-  resolved "https://registry.yarnpkg.com/@hot-labs/kit/-/kit-1.0.32.tgz#f8b670297fe7c4dbdc180c7770e5a983bf61d58e"
-  integrity sha512-Gf2QzsGy1wukxNrowluaOZkvhjOl46qg2n+dQ2N5unxA2LaSpTOH240E0hbUM3zU6rDCh7wHiPYfPC3RU/zbGw==
-  dependencies:
-    "@cosmjs/stargate" "^0.37.0"
-    "@creit.tech/stellar-wallets-kit" "^1.9.1"
-    "@defuse-protocol/one-click-sdk-typescript" "^0.1.13"
-    "@hot-labs/near-connect" "^0.6.10"
-    "@hot-labs/omni-sdk" "^2.24.0"
-    "@keplr-wallet/proto-types" "^0.12.291"
-    "@keplr-wallet/provider-extension" "^0.12.291"
-    "@metamask/sdk" "^0.34.0"
-    "@near-js/crypto" "^2.3.3"
-    "@near-js/providers" "^2.5.1"
-    "@near-js/utils" "^2.2.4"
-    "@noble/hashes" "^2.0.1"
-    "@scure/base" "^2.0.0"
-    "@solana/spl-token" "^0.4.14"
-    "@ton-api/client" "^0.4.0"
-    "@ton/core" "^0.62.0"
-    "@ton/crypto" "^3.3.0"
-    "@tonconnect/ui" "^2.2.0"
-    "@walletconnect/universal-provider" "^2.23.0"
-    ethers "^6.15.0"
-    mobx "^6.15.0"
-    mobx-react-lite "^4.1.1"
-    qr-code-styling "^1.9.2"
-    styled-components "^6.1.19"
 
 "@hot-wallet/sdk@1.0.11":
   version "1.0.11"
