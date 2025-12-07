@@ -163,7 +163,6 @@ export class Exchange {
 
     // if withdraw token is not native, we need to swap a bit of it to native to cover the withdraw fee
     const swap = await bridge.buildSwapExectOutIntent({
-      intentAccount: request.sender.omniAddress,
       intentFrom: utils.toOmniIntent(request.to.chain, request.to.address),
       intentTo: utils.toOmniIntent(request.to.chain, "native"),
       amountOut: gaslessFee.gasPrice,

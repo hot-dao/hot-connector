@@ -6,8 +6,9 @@ import { hex } from "@scure/base";
 import { WalletType } from "../omni/config";
 import { HotConnector } from "../HotConnector";
 import { ConnectorType, OmniConnector, OmniConnectorOptions, WC_ICON } from "../OmniConnector";
-import CosmosWallet from "./wallet";
 import { OmniWallet } from "../OmniWallet";
+
+import CosmosWallet from "./wallet";
 
 export interface CosmosConnectorOptions extends OmniConnectorOptions {
   cosmosChains?: Record<string, { chain: string; rpc: string; denom: string; prefix: string }>;
@@ -162,19 +163,27 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
         sendTransaction: async (signDoc: any, opts = { preferNoSetFee: true }) => {
           await keplr.enable(Object.keys(this.cosmosChains));
           const account = await keplr.getKey(signDoc.chainId);
-          const protoSignResponse = await keplr.signDirect(signDoc.chainId, account.bech32Address, signDoc, opts);
-          const client = await StargateClient.connect(this.getConfig(signDoc.chainId)?.rpc || "");
+          const rpcEndpoint = this.getConfig(signDoc.chainId)?.rpc || "";
 
-          // Build a TxRaw and serialize it for broadcasting
-          const protobufTx = TxRaw.encode({
-            bodyBytes: protoSignResponse.signed.bodyBytes,
-            authInfoBytes: protoSignResponse.signed.authInfoBytes,
-            signatures: [Buffer.from(protoSignResponse.signature.signature, "base64")],
-          }).finish();
+          try {
+            const protoSignResponse = await keplr.signDirect(signDoc.chainId, account.bech32Address, signDoc, opts);
 
-          const result = await client.broadcastTx(protobufTx);
-          if (result.code !== 0) throw "Transaction failed";
-          return result.transactionHash;
+            // Build a TxRaw and serialize it for broadcasting
+            const protobufTx = TxRaw.encode({
+              bodyBytes: protoSignResponse.signed.bodyBytes,
+              authInfoBytes: protoSignResponse.signed.authInfoBytes,
+              signatures: [Buffer.from(protoSignResponse.signature.signature, "base64")],
+            }).finish();
+
+            const client = await StargateClient.connect(rpcEndpoint);
+            const result = await client.broadcastTx(protobufTx);
+            if (result.code !== 0) throw "Transaction failed";
+            return result.transactionHash;
+          } catch (e: any) {
+            if (!e?.toString()?.includes("SIGN_MODE_DIRECT")) throw e;
+            const signer = await import("./amino");
+            return await signer.signAmino(keplr, rpcEndpoint, account, signDoc);
+          }
         },
       })
     );
