@@ -211,24 +211,6 @@ export default class NearWallet extends OmniWallet {
   async signIntents(intents: Record<string, any>[], options?: { nonce?: Uint8Array; deadline?: number }): Promise<Record<string, any>> {
     if (!this.wallet) throw "not impl";
 
-    const keys = await rpc.viewMethod({ contractId: "intents.near", methodName: "public_keys_of", args: { account_id: this.address } });
-    if (!keys.includes(this.publicKey)) {
-      await this.sendTransaction({
-        receiverId: "intents.near",
-        actions: [
-          {
-            type: "FunctionCall",
-            params: {
-              methodName: "add_public_key",
-              args: { public_key: this.publicKey },
-              deposit: String(1n),
-              gas: String(80n * TGAS),
-            },
-          },
-        ],
-      });
-    }
-
     const nonce = new Uint8Array(options?.nonce || window.crypto.getRandomValues(new Uint8Array(32)));
     const message = JSON.stringify({
       deadline: options?.deadline ? new Date(options.deadline).toISOString() : "2100-01-01T00:00:00.000Z",
@@ -239,6 +221,29 @@ export default class NearWallet extends OmniWallet {
     const result = await this.wallet.signMessage({ message, recipient: "intents.near", nonce });
     if (!result) throw new Error("Failed to sign message");
     const { signature, publicKey } = result;
+
+    const keys = await rpc.viewMethod({
+      contractId: "intents.near",
+      methodName: "public_keys_of",
+      args: { account_id: this.address },
+    });
+
+    if (!keys.includes(publicKey)) {
+      await this.sendTransaction({
+        receiverId: "intents.near",
+        actions: [
+          {
+            type: "FunctionCall",
+            params: {
+              methodName: "add_public_key",
+              args: { public_key: publicKey },
+              gas: String(80n * TGAS),
+              deposit: String(1n),
+            },
+          },
+        ],
+      });
+    }
 
     return {
       standard: "nep413",
