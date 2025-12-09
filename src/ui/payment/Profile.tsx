@@ -5,9 +5,9 @@ import { useEffect } from "react";
 import { LogoutIcon } from "../icons/logout";
 import { openBridge, openConnector } from "../router";
 import { HotConnector } from "../../HotConnector";
-import { formatter } from "../../omni/utils";
-import { OmniToken } from "../../omni/config";
-import { tokens } from "../../omni/tokens";
+import { formatter } from "../../core/utils";
+import { OmniToken } from "../../core/config";
+import { tokens } from "../../core/tokens";
 import Popup from "../Popup";
 
 import { ImageView, TokenCard } from "./TokenCard";

@@ -3,11 +3,11 @@ import { Transaction, PublicKey, VersionedTransaction, Connection } from "@solan
 import { base58 } from "@scure/base";
 import { runInAction } from "mobx";
 
-import { ConnectorType, OmniConnector, OmniConnectorOptions, WC_ICON } from "../OmniConnector";
+import { ConnectorType, OmniConnector, WC_ICON } from "../OmniConnector";
 import { HotConnector } from "../HotConnector";
 import { OmniWallet } from "../OmniWallet";
-import { isInjected } from "../hot-wallet/hot";
-import { WalletType } from "../omni/config";
+import { isInjected } from "../hot-wallet/iframe";
+import { WalletType } from "../core/config";
 
 import SolanaProtocolWallet from "./protocol";
 import { getWallets } from "./wallets";
@@ -23,8 +23,8 @@ class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet }> {
   name = "Solana Wallet";
   id = "solana";
 
-  constructor(wibe3: HotConnector, readonly args?: OmniConnectorOptions) {
-    super(wibe3, args);
+  constructor(wibe3: HotConnector) {
+    super(wibe3);
 
     wallets.get().forEach((t) => {
       if (this.options.find((w) => w.name === t.name)) return;
@@ -69,12 +69,14 @@ class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet }> {
       this.options = this.options.filter((w) => w.id !== wallet.name);
     });
 
-    this.initWalletConnect().then(async (wc) => {
-      this.options.unshift({ type: "external", download: "https://www.walletconnect.com/get", wallet: {} as Wallet, name: "WalletConnect", id: "walletconnect", icon: WC_ICON });
-      const selected = await this.getConnectedWallet();
-      if (selected.type !== "walletconnect") return;
-      this.setupWalletConnect();
-    });
+    this.initWalletConnect()
+      .then(async (wc) => {
+        this.options.unshift({ type: "external", download: "https://www.walletconnect.com/get", wallet: {} as Wallet, name: "WalletConnect", id: "walletconnect", icon: WC_ICON });
+        const selected = await this.getConnectedWallet();
+        if (selected.type !== "walletconnect") return;
+        this.setupWalletConnect();
+      })
+      .catch(() => {});
   }
 
   async setupWalletConnect(): Promise<SolanaWallet> {

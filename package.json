@@ -1,6 +1,6 @@
 {
   "name": "@hot-labs/kit",
-  "version": "1.0.40",
+  "version": "1.0.41",
   "description": "HOT Labs Kit is chain agnostic connector with omni payments",
   "license": "ISC",
   "author": "",
@@ -9,7 +9,15 @@
   "types": "./build/index.d.ts",
   "exports": {
     ".": "./build/index.js",
-    "./server": "./build/omni/index.js"
+    "./defaults": "./build/defaults.js",
+    "./hot-wallet": "./build/hot-wallet/index.js",
+    "./cosmos": "./build/cosmos/index.js",
+    "./evm": "./build/evm/index.js",
+    "./near": "./build/near/index.js",
+    "./solana": "./build/solana/index.js",
+    "./stellar": "./build/stellar/index.js",
+    "./ton": "./build/ton/index.js",
+    "./core": "./build/core/index.js"
   },
   "directories": {
     "build": "build"

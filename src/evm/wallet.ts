@@ -1,11 +1,12 @@
 import { base64, base58, hex } from "@scure/base";
-import { BrowserProvider, ethers, JsonRpcProvider, JsonRpcSigner, TransactionRequest } from "ethers";
+import { BrowserProvider, ethers, JsonRpcProvider, TransactionRequest } from "ethers";
+import { JsonRpcSigner } from "ethers";
 
 import { OmniConnector } from "../OmniConnector";
 import { OmniWallet } from "../OmniWallet";
-import { WalletType } from "../omni/config";
-import { ReviewFee } from "../omni/bridge";
-import { Token } from "../omni/token";
+import { WalletType } from "../core/config";
+import { ReviewFee } from "../core/bridge";
+import { Token } from "../core/token";
 import { erc20abi } from "./abi";
 
 export interface EvmProvider {
@@ -110,8 +111,12 @@ class EvmWallet extends OmniWallet {
 
   async sendTransaction(chain: number, request: TransactionRequest): Promise<string> {
     if (!this.provider.request) throw "not impl";
+    const provider = new BrowserProvider(this.provider as any);
+    const signer = new JsonRpcSigner(provider, this.address);
+
     await this.provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: `0x${chain.toString(16)}` }] });
-    return await this.provider.request({ method: "eth_sendTransaction", params: [request] });
+    const tx = await signer.sendTransaction(request);
+    return tx.hash;
   }
 
   async transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }): Promise<string> {

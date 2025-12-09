@@ -1,10 +1,10 @@
 import { sep43Modules, HotWalletModule, StellarWalletsKit, WalletNetwork, ISupportedWallet } from "@creit.tech/stellar-wallets-kit";
 import { Transaction } from "@stellar/stellar-base";
 
-import { WalletType } from "../omni/config";
+import { WalletType } from "../core/config";
 import { HotConnector } from "../HotConnector";
 import { ConnectorType, OmniConnector } from "../OmniConnector";
-import { isInjected } from "../hot-wallet/hot";
+import { isInjected } from "../hot-wallet/iframe";
 import { OmniWallet } from "../OmniWallet";
 import StellarWallet from "./wallet";
 

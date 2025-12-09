@@ -1,18 +1,22 @@
 import { WalletManifest, SignAndSendTransactionParams, SignAndSendTransactionsParams, SignMessageParams } from "@hot-labs/near-connect";
 import { Transaction } from "@stellar/stellar-base";
 import { action, makeObservable } from "mobx";
+import uuid4 from "uuid4";
 
-import { requestWebWallet } from "./hot-wallet/wallet";
-import { ConnectorType, OmniConnector } from "./OmniConnector";
-import { OmniWallet } from "./OmniWallet";
-import { WalletType } from "./omni/config";
+import { ConnectorType, OmniConnector } from "../OmniConnector";
+import { OmniWallet } from "../OmniWallet";
+import { WalletType } from "../core/config";
 
-import EvmWallet from "./evm/wallet";
-import NearWallet from "./near/wallet";
-import SolanaWallet from "./solana/wallet";
-import TonWallet from "./ton/wallet";
-import StellarWallet from "./stellar/wallet";
-import { HotConnector } from "./HotConnector";
+import EvmWallet from "../evm/wallet";
+import NearWallet from "../near/wallet";
+import SolanaWallet from "../solana/wallet";
+import TonWallet from "../ton/wallet";
+import StellarWallet from "../stellar/wallet";
+import { HotConnector } from "../HotConnector";
+
+export interface GoogleConnectorOptions {
+  webWallet?: string;
+}
 
 class GoogleConnector extends OmniConnector<OmniWallet> {
   walletTypes = [WalletType.EVM, WalletType.STELLAR, WalletType.TON, WalletType.NEAR, WalletType.SOLANA];
@@ -20,21 +24,20 @@ class GoogleConnector extends OmniConnector<OmniWallet> {
   type = ConnectorType.SOCIAL;
   name = "Google Wallet";
   id = "google";
+  webWallet: string;
 
-  constructor(wibe3: HotConnector) {
+  constructor(wibe3: HotConnector, options?: GoogleConnectorOptions) {
     super(wibe3);
 
-    makeObservable(this, {
-      connectWallet: action,
-    });
-
+    this.webWallet = options?.webWallet ?? "https://wallet.google.com";
+    makeObservable(this, { connectWallet: action });
     this.getStorage().then((accounts: any) => {
       accounts.forEach((account: any) => this.connectWallet(account));
     });
   }
 
   connectWallet(account: { type: number; address: string; publicKey: string }) {
-    const request = requestWebWallet(account.type, account.address);
+    const request = this.requestWebWallet(account.type, account.address);
 
     if (account.type === WalletType.EVM) {
       this.setWallet(
@@ -87,7 +90,7 @@ class GoogleConnector extends OmniConnector<OmniWallet> {
   }
 
   async connect() {
-    const accounts = await requestWebWallet()("connect:google", {});
+    const accounts = await this.requestWebWallet()("connect:google", {});
     accounts.forEach((account: { type: number; address: string; publicKey: string }) => this.connectWallet(account));
     this.setStorage(accounts);
     return this.wallets[0];
@@ -97,6 +100,46 @@ class GoogleConnector extends OmniConnector<OmniWallet> {
     this.removeAllWallets();
     this.removeStorage();
   }
+
+  requestWebWallet = (chain?: number, address?: string) => (method: string, request: any) => {
+    const width = 480;
+    const height = 640;
+    const x = (window.screen.width - width) / 2;
+    const y = (window.screen.height - height) / 2;
+    const popup = window.open(`${this.wibe3.settings.webWallet}`, "_blank", `popup=1,width=${width},height=${height},top=${y},left=${x}`);
+
+    return new Promise<any>(async (resolve, reject) => {
+      const interval = setInterval(() => {
+        if (!popup?.closed) return;
+        clearInterval(interval);
+        reject(new Error("User rejected"));
+      }, 100);
+
+      const id = uuid4();
+      const handler = (event: MessageEvent) => {
+        if (event.origin !== this.wibe3.settings.webWallet) return;
+
+        if (event.data === "hot:ready") {
+          popup?.postMessage({ chain, address, method, request, id }, "*");
+          return;
+        }
+
+        if (event.data.id !== id) return;
+        if (event.data.success === false) {
+          clearInterval(interval);
+          reject(new Error(event.data.payload));
+          window.removeEventListener("message", handler);
+        }
+
+        window.removeEventListener("message", handler);
+        resolve(event.data.payload);
+        clearInterval(interval);
+        popup?.close();
+      };
+
+      window.addEventListener("message", handler);
+    });
+  };
 }
 
 export default GoogleConnector;

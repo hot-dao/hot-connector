@@ -2,13 +2,13 @@ import { base64, base58, hex, base32 } from "@scure/base";
 import { Address, Asset, BASE_FEE, Claimant, Contract, Memo, nativeToScVal, Networks, Operation, TimeoutInfinite, Transaction, TransactionBuilder, xdr } from "@stellar/stellar-base";
 import { rpc } from "@stellar/stellar-sdk";
 
-import { WalletType } from "../omni/config";
+import { WalletType } from "../core/config";
 import { OmniWallet } from "../OmniWallet";
 import { OmniConnector } from "../OmniConnector";
-import { bridge, ReviewFee } from "../omni/bridge";
-import { formatter } from "../omni/utils";
-import { Network } from "../omni/config";
-import { Token } from "../omni/token";
+import { bridge, ReviewFee } from "../core/bridge";
+import { formatter } from "../core/utils";
+import { Network } from "../core/config";
+import { Token } from "../core/token";
 
 interface ProtocolWallet {
   signTransaction?: (transaction: Transaction) => Promise<{ signedTxXdr: string }>;

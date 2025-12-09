@@ -1,5 +1,5 @@
 import { type ModuleInterface, ModuleType, WalletNetwork } from "@creit.tech/stellar-wallets-kit";
-import { requestHot } from "./hot";
+import { requestHot } from "../hot-wallet/iframe";
 
 export const HOTWALLET_ID: string = "hot-wallet";
 

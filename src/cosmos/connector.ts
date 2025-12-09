@@ -3,15 +3,15 @@ import { TxRaw } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
 import { StargateClient } from "@cosmjs/stargate";
 import { hex } from "@scure/base";
 
-import { WalletType } from "../omni/config";
+import { WalletType } from "../core/config";
 import { HotConnector } from "../HotConnector";
-import { ConnectorType, OmniConnector, OmniConnectorOptions, WC_ICON } from "../OmniConnector";
+import { ConnectorType, OmniConnector, WC_ICON } from "../OmniConnector";
 import { OmniWallet } from "../OmniWallet";
 
 import { signAndSendTx } from "./helpers";
 import CosmosWallet from "./wallet";
 
-export interface CosmosConnectorOptions extends OmniConnectorOptions {
+export interface CosmosConnectorOptions {
   cosmosChains?: Record<string, { chain: string; rpc: string; denom: string; prefix: string }>;
 }
 
@@ -52,7 +52,7 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
   id = "cosmos";
 
   constructor(wibe3: HotConnector, options?: CosmosConnectorOptions) {
-    super(wibe3, options);
+    super(wibe3);
 
     this.options = [
       {
@@ -84,19 +84,21 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
       if (type === "leap" && window.leap) this.setKeplrWallet(window.leap, address, publicKey);
     });
 
-    this.initWalletConnect().then(async (wc) => {
-      this.options.unshift({
-        download: "https://www.walletconnect.com/get",
-        name: "WalletConnect",
-        id: "walletconnect",
-        type: "external",
-        icon: WC_ICON,
-      });
+    this.initWalletConnect()
+      .then(async (wc) => {
+        this.options.unshift({
+          download: "https://www.walletconnect.com/get",
+          name: "WalletConnect",
+          id: "walletconnect",
+          type: "external",
+          icon: WC_ICON,
+        });
 
-      const selected = await this.getStorage();
-      if (selected.type !== "walletconnect") return;
-      this.setupWalletConnect(selected.id as "keplr" | "leap");
-    });
+        const selected = await this.getStorage();
+        if (selected.type !== "walletconnect") return;
+        this.setupWalletConnect(selected.id as "keplr" | "leap");
+      })
+      .catch(() => {});
   }
 
   getConfig(chain: string) {

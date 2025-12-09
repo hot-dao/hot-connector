@@ -8,12 +8,12 @@ import NearWallet from "./near/wallet";
 import EvmWallet from "./evm/wallet";
 
 import { HotConnector } from "./HotConnector";
-import { Network, OmniToken, WalletType } from "./omni/config";
-import { bridge, ReviewFee } from "./omni/bridge";
-import { Recipient } from "./omni/recipient";
+import { Network, OmniToken, WalletType } from "./core/config";
+import { bridge, ReviewFee } from "./core/bridge";
+import { Recipient } from "./core/recipient";
 import { OmniWallet } from "./OmniWallet";
-import { tokens } from "./omni/tokens";
-import { Token } from "./omni/token";
+import { tokens } from "./core/tokens";
+import { Token } from "./core/token";
 
 OpenAPI.BASE = "https://1click.chaindefuser.com";
 OpenAPI.TOKEN = "";

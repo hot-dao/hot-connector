@@ -2,7 +2,7 @@ import { observer } from "mobx-react-lite";
 
 import { HotConnector } from "../../HotConnector";
 import { ConnectorType, OmniConnector } from "../../OmniConnector";
-import { formatter } from "../../omni/utils";
+import { formatter } from "../../core/utils";
 
 import { ImageView } from "../payment/TokenCard";
 import { PopupOption, PopupOptionInfo } from "../styles";

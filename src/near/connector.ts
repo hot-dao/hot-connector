@@ -1,21 +1,10 @@
 import { NearConnector } from "@hot-labs/near-connect";
 import { runInAction } from "mobx";
 
-import { WalletType } from "../omni/config";
+import { WalletType } from "../core/config";
 import { ConnectorType, OmniConnector } from "../OmniConnector";
 import { HotConnector } from "../HotConnector";
 import NearWallet from "./wallet";
-
-export interface NearConnectorOptions {
-  connector?: NearConnector;
-  projectId?: string;
-  metadata?: {
-    name: string;
-    description: string;
-    url: string;
-    icons: string[];
-  };
-}
 
 class Connector extends OmniConnector<NearWallet> {
   connector: NearConnector;
@@ -25,14 +14,14 @@ class Connector extends OmniConnector<NearWallet> {
   name = "NEAR Wallet";
   id = "near";
 
-  constructor(readonly wibe3: HotConnector, options?: NearConnectorOptions) {
+  constructor(readonly wibe3: HotConnector, connector?: NearConnector) {
     super(wibe3);
 
     this.connector =
-      options?.connector ||
+      connector ||
       new NearConnector({
         network: "mainnet",
-        walletConnect: options?.projectId ? { projectId: options.projectId, metadata: options.metadata } : undefined,
+        walletConnect: this.wibe3.settings?.projectId ? { projectId: this.wibe3.settings.projectId, metadata: this.wibe3.settings.metadata } : undefined,
       });
 
     this.connector.on("wallet:signOut", () => this.removeWallet());

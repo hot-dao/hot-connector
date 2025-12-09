@@ -36,8 +36,16 @@ export default defineConfig({
 
 ```ts
 import { HotConnector } from "@hot-labs/kit";
+import stellar from "@hot-labs/kit/stellar";
+import solana from "@hot-labs/kit/solana";
+import cosmos from "@hot-labs/kit/cosmos";
+import near from "@hot-labs/kit/near";
+import ton from "@hot-labs/kit/ton";
+import evm from "@hot-labs/kit/evm";
 
 const connector = new HotConnector({
+  connectors: [near(), evm(), solana(), ton(), stellar(), cosmos()],
+
   // optional for WalletConnect
   projectId: "1292473190ce7eb75c9de67e15aaad99",
   // optional for WalletConnect
@@ -56,7 +64,7 @@ connector.onDisconnect(({ wallet }) => {});
 ## Server side usage
 
 ```ts
-import { Intents, OmniToken } from "@hot-labs/kit/server";
+import { Intents, OmniToken } from "@hot-labs/kit/core";
 
 await Intents.builder //
   .give(OmniToken.USDT, 1)

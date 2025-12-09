@@ -6,14 +6,14 @@ import uuid4 from "uuid4";
 import { SwitchIcon } from "../icons/switch";
 import { ArrowRightIcon } from "../icons/arrow-right";
 
-import { formatter } from "../../omni/utils";
-import { tokens } from "../../omni/tokens";
-import { Recipient } from "../../omni/recipient";
+import { formatter } from "../../core/utils";
+import { tokens } from "../../core/tokens";
+import { Recipient } from "../../core/recipient";
 import { OmniWallet } from "../../OmniWallet";
 import { BridgeReview } from "../../exchange";
 import { HotConnector } from "../../HotConnector";
-import { WalletType } from "../../omni/config";
-import { Token } from "../../omni/token";
+import { WalletType } from "../../core/config";
+import { Token } from "../../core/token";
 
 import Popup from "../Popup";
 import { PopupButton } from "../styles";
@@ -472,7 +472,7 @@ const AvailableBalance = styled.div`
   gap: 4;
   overflow: hidden;
   max-width: 200px;
-  text-wrap: nowrap;
+  white-space: nowrap;
 
   p {
     overflow: hidden;

@@ -1,24 +1,15 @@
 import { computed, makeObservable, observable, runInAction } from "mobx";
 
 import { openBridge, openConnector, openPayment, openProfile, openWalletPicker } from "./ui/router";
-import { ConnectorType, OmniConnector, OmniConnectorOptions } from "./OmniConnector";
-import { chainsMap, Network, WalletType } from "./omni/config";
-import { OmniWallet, SignedAuth } from "./OmniWallet";
-
-import NearConnector, { NearConnectorOptions } from "./near/connector";
-import EvmConnector, { EvmConnectorOptions } from "./evm/connector";
-import CosmosConnector, { CosmosConnectorOptions } from "./cosmos/connector";
-import TonConnector, { TonConnectorOptions } from "./ton/connector";
-import SolanaConnector from "./solana/connector";
-import StellarConnector from "./stellar/connector";
-import GoogleConnector from "./GoogleConnector";
+import { ConnectorType, OmniConnector } from "./OmniConnector";
+import { chainsMap, Network, WalletType } from "./core/config";
+import { OmniWallet } from "./OmniWallet";
 
 import { Exchange } from "./exchange";
-import { OmniToken } from "./omni/config";
-import { formatter } from "./omni/utils";
-import { Token } from "./omni/token";
-import { GlobalSettings } from "./settings";
-import { EventEmitter } from "./events";
+import { OmniToken } from "./core/config";
+import { formatter } from "./core/utils";
+import { Token } from "./core/token";
+import { EventEmitter } from "./core/events";
 
 import NearWallet from "./near/wallet";
 import EvmWallet from "./evm/wallet";
@@ -26,23 +17,20 @@ import SolanaWallet from "./solana/wallet";
 import StellarWallet from "./stellar/wallet";
 import TonWallet from "./ton/wallet";
 import CosmosWallet from "./cosmos/wallet";
-import { Intents } from "./omni/Intents";
-import { Recipient } from "./omni/recipient";
-import { openAuthPopup } from "./ui/connect/AuthPopup";
-import { tokens } from "./omni/tokens";
+import { Intents } from "./core/Intents";
+import { Recipient } from "./core/recipient";
+import { tokens } from "./core/tokens";
+import { rpc } from "./core/nearRpc";
 
-export const near = (options?: NearConnectorOptions) => (wibe3: HotConnector) => new NearConnector(wibe3, options);
-export const evm = (options?: EvmConnectorOptions) => (wibe3: HotConnector) => new EvmConnector(wibe3, options);
-export const solana = (options?: OmniConnectorOptions) => (wibe3: HotConnector) => new SolanaConnector(wibe3, options);
-export const cosmos = (options?: CosmosConnectorOptions) => (wibe3: HotConnector) => new CosmosConnector(wibe3, options);
-export const ton = (options?: TonConnectorOptions) => (wibe3: HotConnector) => new TonConnector(wibe3, options);
-export const stellar = () => (wibe3: HotConnector) => new StellarConnector(wibe3);
-export const google = () => (wibe3: HotConnector) => new GoogleConnector(wibe3);
-
-interface HotConnectorOptions extends EvmConnectorOptions, OmniConnectorOptions, TonConnectorOptions, NearConnectorOptions, CosmosConnectorOptions {
-  connectors?: OmniConnector[];
-  webWallet?: string;
-  tonApi?: string;
+interface HotConnectorOptions {
+  connectors?: ((wibe3: HotConnector) => Promise<OmniConnector>)[];
+  projectId?: string;
+  metadata?: {
+    name: string;
+    description: string;
+    url: string;
+    icons: string[];
+  };
 }
 
 export class HotConnector {
@@ -55,6 +43,19 @@ export class HotConnector {
     disconnect: { wallet: OmniWallet };
     tokensUpdate: { tokens: Token[] };
   }>();
+
+  public settings: {
+    webWallet: string;
+    projectId?: string;
+    metadata?: {
+      name: string;
+      description: string;
+      url: string;
+      icons: string[];
+    };
+  } = {
+    webWallet: "https://app.hot-labs.org",
+  };
 
   constructor(options?: HotConnectorOptions) {
     makeObservable(this, {
@@ -71,12 +72,20 @@ export class HotConnector {
       cosmos: computed,
     });
 
-    if (typeof window !== "undefined") {
-      this.connectors = [near(), evm(options), solana(options), stellar(), ton(options), cosmos(options)].map((t) => t(this));
-    }
+    const connectors: OmniConnector[] = [];
+    const tasks = options?.connectors?.map(async (initConnector, index) => {
+      const connector = await initConnector(this);
+      connector.onConnect((payload) => this.events.emit("connect", payload));
+      connector.onDisconnect((payload) => this.events.emit("disconnect", payload));
+      connectors[index] = connector;
+    });
 
-    GlobalSettings.webWallet = options?.webWallet ?? GlobalSettings.webWallet;
-    GlobalSettings.tonApi = options?.tonApi ?? GlobalSettings.tonApi;
+    Promise.all(tasks ?? []).then(() => {
+      this.connectors = connectors.filter((t) => t != null);
+    });
+
+    this.settings.projectId = options?.projectId ?? undefined;
+    this.settings.metadata = options?.metadata ?? undefined;
 
     this.connectors.forEach((t) => {
       t.onConnect((payload) => this.events.emit("connect", payload));
@@ -136,6 +145,10 @@ export class HotConnector {
       });
   }
 
+  get nearRpc() {
+    return rpc;
+  }
+
   get near(): NearWallet | null {
     return this.wallets.find((w) => w.type === WalletType.NEAR) as NearWallet | null;
   }
@@ -191,13 +204,6 @@ export class HotConnector {
       omni: omniToken?.balance ?? 0n,
       total: +omni.float((omniToken?.balance ?? 0n) + available).toFixed(6),
     };
-  }
-
-  async auth<T = SignedAuth>(wallet: OmniWallet, domain: string, intents?: Record<string, any>[], then?: (signed: SignedAuth) => Promise<T>): Promise<T> {
-    return openAuthPopup<T>(wallet, async () => {
-      const signed = await wallet.signIntentsWithAuth(domain, intents);
-      return (await then?.(signed)) ?? (signed as T);
-    });
   }
 
   async fetchToken(token: Token, wallet: OmniWallet) {

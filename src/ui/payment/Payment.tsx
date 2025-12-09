@@ -3,11 +3,11 @@ import { useEffect } from "react";
 
 import { HotConnector } from "../../HotConnector";
 import { openBridge, openConnector } from "../router";
-import { Recipient } from "../../omni/recipient";
+import { Recipient } from "../../core/recipient";
 import { BridgeReview } from "../../exchange";
 import { OmniWallet } from "../../OmniWallet";
-import { Network } from "../../omni/config";
-import { Token } from "../../omni/token";
+import { Network } from "../../core/config";
+import { Token } from "../../core/token";
 import Popup from "../Popup";
 
 import { TokenCard } from "./TokenCard";

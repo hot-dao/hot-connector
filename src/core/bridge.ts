@@ -6,6 +6,7 @@ export { ReviewFee };
 export const bridge = new HotBridge({
   api: ["https://dev.herewallet.app"],
   solanaRpc: ["https://api0.herewallet.app/api/v1/solana/rpc/1001"],
+  mpcApi: ["https://apt-hebdomadally-ariana.ngrok-free.dev"],
 
   publishIntents: async (signed: Record<string, any>[], hashes: string[] = []) => {
     const hash = await Intents.publishSignedIntents(signed, hashes);

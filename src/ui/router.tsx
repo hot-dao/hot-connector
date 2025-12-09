@@ -1,10 +1,10 @@
 import { HotConnector } from "../HotConnector";
 import { OmniConnector } from "../OmniConnector";
 import { BridgeReview } from "../exchange";
-import { Token } from "../omni/token";
+import { Token } from "../core/token";
 import { OmniWallet } from "../OmniWallet";
-import { WalletType } from "../omni/config";
-import { Recipient } from "../omni/recipient";
+import { WalletType } from "../core/config";
+import { Recipient } from "../core/recipient";
 
 import { present } from "./Popup";
 import { Payment } from "./payment/Payment";

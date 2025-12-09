@@ -1,4 +1,4 @@
-import { isInjected, requestHot } from "./hot";
+import { isInjected, requestHot } from "../hot-wallet/iframe";
 
 class HotEvmProvider {
   _events = new Map<string, Set<any>>();

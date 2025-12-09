@@ -1,10 +1,8 @@
 import { Address, beginCell, Cell, loadStateInit, toNano } from "@ton/core";
 import { Maybe } from "@ton/core/dist/utils/maybe";
 import { JettonBalance, TonApiClient } from "@ton-api/client";
-import { GlobalSettings } from "../settings";
 
-export const tonApi = new TonApiClient({ baseUrl: "https://tonapi.io", apiKey: GlobalSettings.tonApi });
-
+export const tonApi = new TonApiClient({ baseUrl: "https://tonapi.io" });
 export const jettonTransferAmount = toNano(0.1);
 export const jettonTransferForwardAmount = BigInt(1);
 

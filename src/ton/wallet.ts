@@ -5,10 +5,10 @@ import { toUserFriendlyAddress } from "@tonconnect/ui";
 import { base58, base64, hex } from "@scure/base";
 
 import { OmniWallet } from "../OmniWallet";
-import { WalletType } from "../omni/config";
+import { WalletType } from "../core/config";
 import { OmniConnector } from "../OmniConnector";
-import { ReviewFee } from "../omni/bridge";
-import { Token } from "../omni/token";
+import { ReviewFee } from "../core/bridge";
+import { Token } from "../core/token";
 
 import { createJettonTransferMsgParams, tonApi } from "./utils";
 

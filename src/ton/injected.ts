@@ -1,4 +1,4 @@
-import { isInjected, requestHot } from "./hot";
+import { isInjected, requestHot } from "../hot-wallet/iframe";
 
 if (isInjected()) {
   // @ts-expect-error: hotWallet is not defined

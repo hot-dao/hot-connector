@@ -6,10 +6,10 @@ import { ArrowRightIcon } from "../icons/arrow-right";
 import { PopupOption, PopupOptionInfo } from "../styles";
 import { ConnectorType, OmniConnector } from "../../OmniConnector";
 import { HotConnector } from "../../HotConnector";
-import { Recipient } from "../../omni/recipient";
-import { WalletType } from "../../omni/config";
+import { Recipient } from "../../core/recipient";
+import { WalletType } from "../../core/config";
 import { openWalletPicker } from "../router";
-import { formatter } from "../../omni/utils";
+import { formatter } from "../../core/utils";
 import Popup from "../Popup";
 
 import { ImageView } from "./TokenCard";

@@ -1,24 +1,17 @@
 import MetaMaskSDK from "@metamask/sdk";
 import { runInAction } from "mobx";
 
-import { ConnectorType, OmniConnector, OmniConnectorOptions, WC_ICON } from "../OmniConnector";
-import { WalletType } from "../omni/config";
-import { isInjected } from "../hot-wallet/hot";
+import { ConnectorType, OmniConnector, WC_ICON } from "../OmniConnector";
+import { Network, WalletType } from "../core/config";
+import { isInjected } from "../hot-wallet/iframe";
 import { HotConnector } from "../HotConnector";
 import EvmWallet, { EvmProvider } from "./wallet";
-
-const chains = [1, 10, 56, 137, 8453, 42161, 421613, 80001];
-
-export interface EvmConnectorOptions extends OmniConnectorOptions {
-  chains?: number[];
-}
 
 class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider }> {
   icon = "https://storage.herewallet.app/upload/06b43b164683c2cbfe9a9c0699f0953fd56f1f802035e7701ea10501d9e091c6.png";
   walletTypes = [WalletType.EVM, WalletType.OMNI];
   type = ConnectorType.WALLET;
   name = "EVM Wallet";
-  chains = chains;
   id = "evm";
 
   MMSDK = new MetaMaskSDK({
@@ -29,10 +22,8 @@ class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider }> {
     },
   });
 
-  constructor(wibe3: HotConnector, readonly settings: EvmConnectorOptions = {}) {
-    super(wibe3, settings);
-
-    if (settings.chains) this.chains.push(...settings.chains);
+  constructor(wibe3: HotConnector) {
+    super(wibe3);
 
     window.addEventListener<any>("eip6963:announceProvider", async (provider) => {
       if (this.options.find((t) => t.name === provider.detail.info.name || t.id === provider.detail.info.uuid)) return;
@@ -60,15 +51,19 @@ class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider }> {
 
     window.dispatchEvent(new Event("eip6963:requestProvider"));
 
-    this.initWalletConnect().then((wc) => {
-      this.options.unshift({ id: "walletconnect", name: "WalletConnect", icon: WC_ICON, provider: {} as any, type: "external" });
-    });
+    this.initWalletConnect()
+      .then((wc) => {
+        this.options.unshift({ id: "walletconnect", name: "WalletConnect", icon: WC_ICON, provider: {} as any, type: "external" });
+      })
+      .catch(() => {});
 
-    this.wc?.then(async (wc) => {
-      const selected = await this.getConnectedWallet();
-      if (selected.id !== "walletconnect") return;
-      this.setupWalletConnect();
-    });
+    this.wc
+      ?.then(async (wc) => {
+        const selected = await this.getConnectedWallet();
+        if (selected.id !== "walletconnect") return;
+        this.setupWalletConnect();
+      })
+      .catch(() => {});
   }
 
   async setupWalletConnect(): Promise<EvmWallet> {
@@ -120,7 +115,7 @@ class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider }> {
         namespaces: {
           eip155: {
             methods: ["eth_sendTransaction", "eth_signTransaction", "eth_sign", "personal_sign", "eth_signTypedData"],
-            chains: chains.map((chain) => `eip155:${chain}`),
+            chains: Object.values(Network).map((chain) => `eip155:${chain}`),
             events: ["chainChanged", "accountsChanged"],
             rpcMap: {},
           },

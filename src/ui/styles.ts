@@ -263,6 +263,7 @@ export const PopupButton = styled.button`
 
 export const PopupRoot = styled.div`
   height: 100%;
+
   h1,
   h2,
   h3,
@@ -278,15 +279,18 @@ export const PopupRoot = styled.div`
   &::-webkit-scrollbar {
     display: none;
   }
+
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* Internet Explorer 10+ */
 
   /* Also hide scrollbars for all inner elements */
   * {
+    -webkit-tap-highlight-color: transparent;
     font-family: ${font};
     scrollbar-width: none;
     -ms-overflow-style: none;
     box-sizing: border-box;
+    color: #fff;
   }
 
   *::-webkit-scrollbar {

@@ -1,12 +1,12 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 
-import { formatter } from "../../omni/utils";
-import { Token } from "../../omni/token";
+import { formatter } from "../../core/utils";
+import { Token } from "../../core/token";
 import { HotConnector } from "../../HotConnector";
 import { OmniWallet } from "../../OmniWallet";
 import { PopupOption } from "../styles";
-import { chainsMap } from "../../omni/config";
+import { chainsMap } from "../../core/config";
 
 const images = {
   cached: new Map<string, Promise<void>>(),

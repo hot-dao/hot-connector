@@ -1,11 +1,4 @@
-const ancestorOrigins = new Set([
-  "http://localhost:1234",
-  "https://my.herewallet.app",
-  "https://tgapp-dev.herewallet.app",
-  "https://tgapp.herewallet.app",
-  "https://beta.herewallet.app",
-  "https://app.hot-labs.org",
-]);
+const ancestorOrigins = new Set(["http://localhost:1234", "https://my.herewallet.app", "https://tgapp-dev.herewallet.app", "https://tgapp.herewallet.app", "https://beta.herewallet.app", "https://app.hot-labs.org"]);
 
 export const isInjected = () => {
   if (typeof window === "undefined") return false;

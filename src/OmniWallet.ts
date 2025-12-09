@@ -1,11 +1,11 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 
 import { openAuthPopup } from "./ui/connect/AuthPopup";
-import { OmniToken, WalletType } from "./omni/config";
+import { OmniToken, WalletType } from "./core/config";
 import { OmniConnector } from "./OmniConnector";
-import { Intents } from "./omni/Intents";
-import { ReviewFee } from "./omni/bridge";
-import { Token } from "./omni/token";
+import { Intents } from "./core/Intents";
+import { ReviewFee } from "./core/bridge";
+import { Token } from "./core/token";
 
 export interface AuthCommitment {
   tradingAddress: string;

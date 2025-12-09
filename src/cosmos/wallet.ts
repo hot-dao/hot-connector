@@ -1,8 +1,8 @@
 import { StargateClient } from "@cosmjs/stargate";
 
 import { OmniWallet, SignedAuth } from "../OmniWallet";
-import { chainsMap, WalletType } from "../omni/config";
-import { ReviewFee } from "../omni/bridge";
+import { chainsMap, WalletType } from "../core/config";
+import { ReviewFee } from "../core/bridge";
 import CosmosConnector from "./connector";
 
 interface ProtocolWallet {

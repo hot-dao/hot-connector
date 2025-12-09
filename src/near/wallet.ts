@@ -4,10 +4,10 @@ import { Action } from "@near-js/transactions";
 
 import { OmniConnector } from "../OmniConnector";
 import { OmniWallet } from "../OmniWallet";
-import { WalletType } from "../omni/config";
-import { ReviewFee } from "../omni/bridge";
-import { rpc, TGAS } from "../omni/nearRpc";
-import { Token } from "../omni/token";
+import { WalletType } from "../core/config";
+import { ReviewFee } from "../core/bridge";
+import { rpc, TGAS } from "../core/nearRpc";
+import { Token } from "../core/token";
 
 export default class NearWallet extends OmniWallet {
   readonly type = WalletType.NEAR;

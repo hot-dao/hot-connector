@@ -1,12 +1,12 @@
 import { makeObservable, observable, runInAction } from "mobx";
 import UniversalProvider, { NamespaceConfig } from "@walletconnect/universal-provider";
 
-import { EventEmitter } from "./events";
+import { EventEmitter } from "./core/events";
 import { LocalStorage } from "./storage";
 import { HotConnector } from "./HotConnector";
 
 import { OmniWallet } from "./OmniWallet";
-import { WalletType } from "./omni/config";
+import { WalletType } from "./core/config";
 import { openWCRequest } from "./ui/router";
 
 export enum ConnectorType {
@@ -20,11 +20,6 @@ export interface OmniConnectorOption {
   id: string;
   download?: string;
   type: "extension" | "external";
-}
-
-export interface OmniConnectorOptions {
-  projectId?: string;
-  metadata?: { name: string; description: string; url: string; icons: string[] };
 }
 
 export const WC_ICON = "https://raw.githubusercontent.com/WalletConnect/walletconnect-assets/refs/heads/master/Icon/Blue%20(Default)/Icon.svg";
@@ -41,7 +36,7 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O = {}> {
 
   protected wc: Promise<UniversalProvider> | null = null;
 
-  constructor(readonly wibe3: HotConnector, readonly settings?: OmniConnectorOptions) {
+  constructor(readonly wibe3: HotConnector) {
     makeObservable(this, {
       wallets: observable,
       options: observable,
@@ -49,12 +44,12 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O = {}> {
   }
 
   async initWalletConnect() {
-    if (!this.settings?.projectId) throw new Error("Project ID is required");
+    if (!this.wibe3.settings?.projectId) throw new Error("Project ID is required");
     if (this.wc) return this.wc;
     this.wc = UniversalProvider.init({
       relayUrl: "wss://relay.walletconnect.org",
-      projectId: this.settings?.projectId,
-      metadata: this.settings?.metadata,
+      projectId: this.wibe3.settings?.projectId,
+      metadata: this.wibe3.settings?.metadata,
       customStoragePrefix: `wibe3:${this.id}`,
       name: this.name,
     });

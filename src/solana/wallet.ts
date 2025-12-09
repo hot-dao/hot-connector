@@ -13,13 +13,13 @@ import {
   createTransferCheckedInstruction,
 } from "@solana/spl-token";
 
-import { Network, WalletType } from "../omni/config";
+import { Network, WalletType } from "../core/config";
 import { OmniConnector } from "../OmniConnector";
 import { OmniWallet } from "../OmniWallet";
 
-import { Token } from "../omni/token";
-import { formatter } from "../omni/utils";
-import { ReviewFee } from "../omni/bridge";
+import { Token } from "../core/token";
+import { formatter } from "../core/utils";
+import { ReviewFee } from "../core/bridge";
 
 import { ISolanaProtocolWallet } from "./protocol";
 

@@ -1,6 +1,6 @@
 import { Transaction, VersionedTransaction, PublicKey } from "@solana/web3.js";
 
-import { isInjected, requestHot } from "../hot";
+import { isInjected, requestHot } from "../../hot-wallet/iframe";
 import { registerWallet } from "./register";
 import { GhostWallet } from "./solana-wallet";
 
