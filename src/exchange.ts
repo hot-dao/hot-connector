@@ -11,6 +11,8 @@ import { Token } from "./core/token";
 import StellarWallet from "./stellar/wallet";
 import { HotConnector } from "./HotConnector";
 import { OmniWallet } from "./OmniWallet";
+import { formatter } from "./core";
+import { loadMaybeExtraCurrency } from "@ton/core";
 
 OpenAPI.BASE = "https://1click.chaindefuser.com";
 OpenAPI.TOKEN = "";
@@ -72,8 +74,11 @@ export class Exchange {
   }
 
   async deposit(args: { sender: OmniWallet; token: Token; amount: bigint; recipient: Recipient; onMessage: (message: string) => void }) {
-    const { sender, token, amount, recipient, onMessage } = args;
+    let { sender, token, amount, recipient, onMessage } = args;
     onMessage("Sending deposit transaction");
+
+    const balance = await this.wibe3.fetchToken(token, sender);
+    amount = formatter.bigIntMin(amount, balance);
 
     if (token.type === WalletType.COSMOS && this.wibe3.isCosmosWallet(sender)) {
       const cosmosBridge = await this.wibe3.hotBridge.cosmos();
@@ -141,6 +146,7 @@ export class Exchange {
       receiver: recipient.address,
       token: token.originalAddress,
       chain: token.originalChain,
+      adjustMax: true,
       gasless: true,
       amount: amount,
     });
@@ -299,10 +305,9 @@ export class Exchange {
     if (review.qoute === "withdraw") {
       if (sender === "qr") throw new Error("Sender is QR");
       await this.withdraw({ sender, token: review.to, amount: review.amountIn, recipient });
-      this.wibe3.fetchToken(review.from, sender);
-
       const recipientWallet = this.wibe3.wallets.find((w) => w.address === recipient.address);
       if (recipientWallet) this.wibe3.fetchToken(review.to, recipientWallet);
+      this.wibe3.fetchToken(review.from, sender);
       return review;
     }
 
