@@ -103,6 +103,11 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
       .catch(() => {});
   }
 
+  getClient(chain: string) {
+    const rpc = chains.getByKey(chain)?.rpc || "";
+    return StargateClient.connect({ url: rpc, headers: { "Api-Key": this.wibe3.api.apiKey } });
+  }
+
   get chains() {
     return chains.getByType(WalletType.COSMOS).map((t) => t.key);
   }
@@ -146,7 +151,7 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
         const chain = chains.getByKey(signDoc.chainId);
         if (!chain) throw new Error("Chain not found");
 
-        const client = await StargateClient.connect(chain.rpc);
+        const client = await this.getClient(chain.key);
         const protobufTx = TxRaw.encode({
           bodyBytes: signed.bodyBytes,
           authInfoBytes: signed.authInfoBytes,
@@ -171,7 +176,7 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
         sendTransaction: async (signDoc: any) => {
           await keplr.enable(this.chains);
           const rpcEndpoint = chains.getByKey(signDoc.chainId)?.rpc || "";
-          return await signAndSendTx(keplr, rpcEndpoint, signDoc);
+          return await signAndSendTx(keplr, rpcEndpoint, this.wibe3.api.apiKey, signDoc);
         },
       })
     );

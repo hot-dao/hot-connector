@@ -26,6 +26,7 @@ export interface BridgeProps {
   widget?: boolean;
   onClose: () => void;
   onProcess: (task: Promise<BridgeReview>) => void;
+  onSelectPair?: (from: Token, to: Token) => void;
   setup?: {
     mobileFullscreen?: boolean;
     autoClose?: boolean; // if true, the popup will close automatically when the transaction is successful
@@ -44,7 +45,7 @@ export interface BridgeProps {
 
 const FIXED = 6;
 
-export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: BridgeProps) => {
+export const Bridge = observer(({ hot, widget, setup, onClose, onProcess, onSelectPair }: BridgeProps) => {
   const [isFiat, setIsFiat] = useState(false);
   const [type, setType] = useState<"exactIn" | "exactOut">(setup?.type || "exactIn");
   const [value, setValue] = useState<string>(setup?.amount?.toString() ?? "");
@@ -62,6 +63,10 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess }: Brid
     message: string;
     review: BridgeReview;
   } | null>(null);
+
+  useEffect(() => {
+    onSelectPair?.(from, to);
+  }, [from, to]);
 
   const [sender, setSender] = useState<OmniWallet | "qr" | undefined>(() => {
     if (setup?.sender) return setup.sender;

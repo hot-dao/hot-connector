@@ -6,13 +6,17 @@ import { AminoTypes, createDefaultAminoConverters } from "@cosmjs/stargate";
 import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
 import { OfflineSigner, Registry } from "@cosmjs/proto-signing";
 
-export const signAndSendTx = async (keplr: Keplr, rpcEndpoint: string, signDoc: any) => {
+export const signAndSendTx = async (keplr: Keplr, clientRpc: string, apiKey: string, signDoc: any) => {
   const registry = new Registry([...defaultRegistryTypes, ...wasmTypes]);
   const aminoTypes = new AminoTypes({ ...createDefaultAminoConverters(), ...createWasmAminoConverters() });
 
   const account = await keplr.getKey(signDoc.chainId);
   const offlineSigner = await keplr.getOfflineSignerAuto(signDoc.chainId);
-  const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner as OfflineSigner, { registry, aminoTypes });
+  const client = await SigningStargateClient.connectWithSigner(
+    { url: clientRpc, headers: { "Api-Key": apiKey } }, //
+    offlineSigner as OfflineSigner,
+    { registry, aminoTypes }
+  );
 
   const authInfo = AuthInfo.decode(signDoc.authInfoBytes);
   const txBody = TxBody.decode(signDoc.bodyBytes);

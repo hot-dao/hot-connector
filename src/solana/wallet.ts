@@ -23,13 +23,15 @@ import { ReviewFee } from "../core/bridge";
 
 import { ISolanaProtocolWallet } from "./protocol";
 
-const connection = new Connection("https://api0.herewallet.app/api/v1/evm/rpc/1001");
-
 class SolanaWallet extends OmniWallet {
   readonly type = WalletType.SOLANA;
+  readonly connection: Connection;
 
   constructor(readonly connector: OmniConnector, readonly wallet: ISolanaProtocolWallet) {
     super(connector);
+    this.connection = new Connection("https://api0.herewallet.app/api/v1/evm/rpc/1001", {
+      httpHeaders: { "Api-Key": connector.wibe3.api.apiKey },
+    });
   }
 
   get address() {
@@ -46,12 +48,12 @@ class SolanaWallet extends OmniWallet {
 
   async fetchBalance(_: number, address: string) {
     if (address === "native") {
-      const balance = await connection.getBalance(new PublicKey(this.address));
+      const balance = await this.connection.getBalance(new PublicKey(this.address));
       return BigInt(balance);
     }
 
     const ATA = getAssociatedTokenAddressSync(new PublicKey(address), new PublicKey(this.address));
-    const meta = await connection.getTokenAccountBalance(ATA);
+    const meta = await this.connection.getTokenAccountBalance(ATA);
     return BigInt(meta.value.amount);
   }
 
@@ -78,7 +80,7 @@ class SolanaWallet extends OmniWallet {
     const destination = new PublicKey(receiver);
     const owner = new PublicKey(this.address);
 
-    const reserve = await connection.getMinimumBalanceForRentExemption(0);
+    const reserve = await this.connection.getMinimumBalanceForRentExemption(0);
     let additionalFee = 0n;
 
     if (token.address === "native") {
@@ -94,7 +96,7 @@ class SolanaWallet extends OmniWallet {
     }
 
     const mint = new PublicKey(token.address);
-    const mintAccount = await connection.getAccountInfo(mint);
+    const mintAccount = await this.connection.getAccountInfo(mint);
     const tokenProgramId = mintAccount?.owner.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
 
     const tokenFrom = getAssociatedTokenAddressSync(mint, owner, false, tokenProgramId);
@@ -102,11 +104,11 @@ class SolanaWallet extends OmniWallet {
 
     const instructions: TransactionInstruction[] = [ComputeBudgetProgram.setComputeUnitPrice({ microLamports: Number(fee.baseFee) }), ComputeBudgetProgram.setComputeUnitLimit({ units: Number(fee.gasLimit) })];
 
-    const isRegistered = await getAccount(connection, tokenTo, "confirmed", tokenProgramId).catch(() => null);
+    const isRegistered = await getAccount(this.connection, tokenTo, "confirmed", tokenProgramId).catch(() => null);
     if (isRegistered == null) {
       const inst = createAssociatedTokenAccountInstruction(new PublicKey(this.address), tokenTo, destination, mint, tokenProgramId, ASSOCIATED_TOKEN_PROGRAM_ID);
       instructions.push(inst);
-      additionalFee += BigInt(await getMinimumBalanceForRentExemptAccount(connection));
+      additionalFee += BigInt(await getMinimumBalanceForRentExemptAccount(this.connection));
     }
 
     if (tokenProgramId === TOKEN_2022_PROGRAM_ID) {
@@ -119,7 +121,7 @@ class SolanaWallet extends OmniWallet {
   }
 
   async transferFee(token: Token, receiver: string): Promise<ReviewFee> {
-    const { blockhash } = await connection.getLatestBlockhash();
+    const { blockhash } = await this.connection.getLatestBlockhash();
     const fee = new ReviewFee({ chain: Network.Solana, gasLimit: 1_400_000n, baseFee: 100n });
     const { instructions, additionalFee, reserve } = await this.buildTranferInstructions(token, 1n, receiver, fee);
 
@@ -132,10 +134,10 @@ class SolanaWallet extends OmniWallet {
     });
 
     if (priorityFeeData?.priorityFeeLevels == null) throw "Failed to fetch gas";
-    const simulate = await connection.simulateTransaction(tx).catch(() => null);
+    const simulate = await this.connection.simulateTransaction(tx).catch(() => null);
     const unitsConsumed = formatter.bigIntMax(BigInt(simulate?.value.unitsConsumed || 10_000n), 10_000n);
 
-    const msgFee = await connection.getFeeForMessage(msgForEstimate);
+    const msgFee = await this.connection.getFeeForMessage(msgForEstimate);
     const medium = BigInt(priorityFeeData.priorityFeeLevels.medium);
     const high = BigInt(priorityFeeData.priorityFeeLevels.high);
     const veryHigh = BigInt(priorityFeeData.priorityFeeLevels.veryHigh);
@@ -176,10 +178,10 @@ class SolanaWallet extends OmniWallet {
 
   async sendTransaction(instructions: TransactionInstruction[]): Promise<string> {
     if (!this.wallet.sendTransaction) throw "not impl";
-    const { blockhash } = await connection.getLatestBlockhash();
+    const { blockhash } = await this.connection.getLatestBlockhash();
     const message = new TransactionMessage({ payerKey: new PublicKey(this.address), recentBlockhash: blockhash, instructions });
     const transaction = new VersionedTransaction(message.compileToV0Message());
-    return await this.wallet.sendTransaction(transaction, connection, { preflightCommitment: "confirmed" });
+    return await this.wallet.sendTransaction(transaction, this.connection, { preflightCommitment: "confirmed" });
   }
 
   async fetchBalances(chain: number, whitelist: string[]): Promise<Record<string, bigint>> {
@@ -189,7 +191,7 @@ class SolanaWallet extends OmniWallet {
       const { balances } = await res.json();
       return { ...balances, native };
     } catch {
-      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(new PublicKey(this.address), { programId: TOKEN_PROGRAM_ID });
+      const tokenAccounts = await this.connection.getParsedTokenAccountsByOwner(new PublicKey(this.address), { programId: TOKEN_PROGRAM_ID });
       const balances = Object.fromEntries(
         tokenAccounts.value.map((account) => {
           const { mint, tokenAmount } = account.account.data.parsed.info;

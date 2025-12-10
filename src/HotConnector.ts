@@ -10,6 +10,7 @@ import { Intents } from "./core/Intents";
 import { tokens } from "./core/tokens";
 import { rpc } from "./core/nearRpc";
 import { Token } from "./core/token";
+import { Api } from "./core/api";
 
 import type CosmosWallet from "./cosmos/wallet";
 import type NearWallet from "./near/wallet";
@@ -24,6 +25,7 @@ import { OmniWallet } from "./OmniWallet";
 import { Exchange } from "./exchange";
 
 interface HotConnectorOptions {
+  apiKey: string;
   chains?: Record<number, ChainConfig>;
   connectors?: ((wibe3: HotConnector) => Promise<OmniConnector>)[];
   walletConnect?: {
@@ -41,6 +43,7 @@ export class HotConnector {
   public connectors: OmniConnector[] = [];
   public balances: Record<string, Record<string, bigint>> = {};
 
+  public api: Api;
   public hotBridge: HotBridge;
   public exchange: Exchange;
 
@@ -72,6 +75,7 @@ export class HotConnector {
       cosmos: computed,
     });
 
+    this.api = new Api({ baseUrl: "https://dev.herewallet.app", apiKey: options?.apiKey ?? "" });
     this.settings.projectId = options?.walletConnect?.projectId ?? undefined;
     this.settings.metadata = options?.walletConnect?.metadata ?? undefined;
     Object.values(options?.chains ?? {}).forEach((chain) => chains.register(chain));

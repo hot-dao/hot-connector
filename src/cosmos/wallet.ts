@@ -1,5 +1,4 @@
 import { StargateClient } from "@cosmjs/stargate";
-
 import { OmniWallet, SignedAuth } from "../OmniWallet";
 import { chains, WalletType } from "../core/chains";
 import { ReviewFee } from "../core/bridge";

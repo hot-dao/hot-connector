@@ -59,10 +59,10 @@ export abstract class OmniWallet {
     return new Intents(this.connector.wibe3).attachWallet(this);
   }
 
-  async auth<T = SignedAuth>(domain: string, intents?: Record<string, any>[], then?: (signed: SignedAuth) => Promise<T>): Promise<T> {
-    return openAuthPopup<T>(this, async () => {
+  async auth(domain: string, intents?: Record<string, any>[]): Promise<string> {
+    return openAuthPopup(this, async () => {
       const signed = await this.signIntentsWithAuth(domain, intents);
-      return (await then?.(signed)) ?? (signed as T);
+      return await this.connector.wibe3.api.auth(signed);
     });
   }
 

@@ -242,6 +242,7 @@ export class Exchange {
       qoute = await OneClickService.getQuote({
         originAsset: intentFrom,
         destinationAsset: intentTo,
+        quoteWaitingTimeMs: 3000,
         slippageTolerance: Math.round(slippage * 10_000),
         swapType: type === "exactIn" ? QuoteRequest.swapType.EXACT_INPUT : QuoteRequest.swapType.EXACT_OUTPUT,
         depositType: from.chain === Network.Hot ? QuoteRequest.depositType.INTENTS : QuoteRequest.depositType.ORIGIN_CHAIN,

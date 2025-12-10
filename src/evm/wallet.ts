@@ -1,6 +1,6 @@
 import { base64, base58, hex } from "@scure/base";
 import { BrowserProvider, ethers, JsonRpcProvider, TransactionRequest } from "ethers";
-import { JsonRpcSigner } from "ethers";
+import { JsonRpcSigner, FetchRequest } from "ethers";
 
 import { OmniConnector } from "../OmniConnector";
 import { OmniWallet } from "../OmniWallet";
@@ -27,7 +27,11 @@ class EvmWallet extends OmniWallet {
   rpc(chain: number) {
     if (chain < 1 || chain == null) throw "Invalid chain";
     if (this.rpcs[chain]) return this.rpcs[chain];
-    const rpc = new JsonRpcProvider(`https://api0.herewallet.app/api/v1/evm/rpc/${chain}`, chain, { staticNetwork: true });
+
+    const request = new FetchRequest(`https://api0.herewallet.app/api/v1/evm/rpc/${chain}`);
+    request.setHeader("Api-Key", this.connector.wibe3.api.apiKey);
+
+    const rpc = new JsonRpcProvider(request, chain, { staticNetwork: true });
     this.rpcs[chain] = rpc;
     return rpc;
   }

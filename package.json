@@ -32,7 +32,7 @@
     "@creit.tech/stellar-wallets-kit": "^1.9.1",
     "@defuse-protocol/one-click-sdk-typescript": "^0.1.13",
     "@hot-labs/near-connect": "^0.6.10",
-    "@hot-labs/omni-sdk": "^2.24.0",
+    "@hot-labs/omni-sdk": "^2.24.3",
     "@keplr-wallet/proto-types": "^0.12.291",
     "@keplr-wallet/provider-extension": "^0.12.291",
     "@metamask/sdk": "^0.34.0",
