@@ -55,8 +55,8 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export class Exchange {
   constructor(readonly wibe3: HotConnector) {
-    OpenAPI.BASE = api.getOneClickApiUrl();
-    OpenAPI.HEADERS = { "api-key": api.apiKey };
+    // OpenAPI.BASE = api.getOneClickApiUrl();
+    // OpenAPI.HEADERS = { "api-key": api.apiKey };
   }
 
   async getToken(chain: number, address: string): Promise<string | null> {
