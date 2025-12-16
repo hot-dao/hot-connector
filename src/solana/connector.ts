@@ -9,8 +9,8 @@ import { OmniWallet } from "../OmniWallet";
 import { WalletType } from "../core/chains";
 import HOT from "../hot-wallet/iframe";
 
-import SolanaProtocolWallet from "./protocol";
-import { getWallets } from "./wallets";
+import SolanaProtocolWallet from "./WalletStandard";
+import { getWallets } from "./walletStandartList";
 import SolanaWallet from "./wallet";
 
 const wallets = getWallets();
@@ -36,7 +36,7 @@ class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet }> {
         const wallet = this.options.find((w) => w.id === id);
         if (!wallet) return;
         const protocolWallet = await SolanaProtocolWallet.connect(wallet.wallet, { silent: true });
-        this.setWallet(new SolanaWallet(this, protocolWallet));
+        this.setWallet(new SolanaWallet(protocolWallet));
       } catch {
         this.removeStorage();
       }
@@ -59,7 +59,7 @@ class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet }> {
         const connected = await this.getConnectedWallet();
         if (connected !== wallet.name) return;
         const protocolWallet = await SolanaProtocolWallet.connect(wallet, { silent: true });
-        this.setWallet(new SolanaWallet(this, protocolWallet));
+        this.setWallet(new SolanaWallet(protocolWallet));
       } catch {
         this.removeStorage();
       }
@@ -88,7 +88,7 @@ class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet }> {
 
     this.setStorage({ type: "walletconnect" });
     return this.setWallet(
-      new SolanaWallet(this, {
+      new SolanaWallet({
         address: account,
         sendTransaction: async (tx: Transaction | VersionedTransaction, connection: Connection, options?: any) => {
           const transaction = Buffer.from(tx.serialize()).toString("base64");
@@ -112,8 +112,9 @@ class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet }> {
     );
   }
 
-  async createWallet(address: string): Promise<OmniWallet> {
-    return new SolanaWallet(this, { address });
+  async disconnect() {
+    this.wallets.forEach((w) => w.wallet.disconnect?.());
+    super.disconnect();
   }
 
   async getConnectedWallet() {
@@ -142,7 +143,7 @@ class SolanaConnector extends OmniConnector<SolanaWallet, { wallet: Wallet }> {
     try {
       this.setStorage({ type: "wallet", id });
       const protocolWallet = await SolanaProtocolWallet.connect(wallet.wallet, { silent: false });
-      return this.setWallet(new SolanaWallet(this, protocolWallet));
+      return this.setWallet(new SolanaWallet(protocolWallet));
     } catch (e) {
       this.removeStorage();
       throw e;

@@ -1,6 +1,8 @@
 import { JsonRpcProvider } from "@near-js/providers";
 import { getErrorTypeFromErrorMessage, parseRpcError } from "@near-js/utils";
 import { TypedError, FinalExecutionOutcome } from "@near-js/types";
+import { api } from "../core/api";
+import { Network } from "../core";
 
 let _nextId = 123;
 
@@ -22,22 +24,13 @@ const wait = (timeout: number) => {
   return new Promise<void>((resolve) => setTimeout(resolve, timeout));
 };
 
-const c1 = Math.random() > 0.5;
-export const rpcProviders = [
-  c1 ? "https://c1.rpc.fastnear.com" : "https://c2.rpc.fastnear.com",
-  c1 ? "https://c2.rpc.fastnear.com" : "https://c1.rpc.fastnear.com",
-  "https://relmn.aurora.dev",
-  "https://nearrpc.aurora.dev",
-  "https://archival-rpc.mainnet.near.org",
-];
-
 export class NearRpc extends JsonRpcProvider {
   public providers: string[];
   public currentProviderIndex = 0;
   public startTimeout;
 
-  constructor(providers = rpcProviders, private timeout = 30_000, private triesCountForEveryProvider = 3, private incrementTimout = true) {
-    super({ url: "" });
+  constructor(providers = [api.getRpcUrl(Network.Near)], private timeout = 30_000, private triesCountForEveryProvider = 3, private incrementTimout = true) {
+    super({ url: api.getRpcUrl(Network.Near) });
     this.currentProviderIndex = 0;
     this.providers = providers;
     this.startTimeout = timeout;

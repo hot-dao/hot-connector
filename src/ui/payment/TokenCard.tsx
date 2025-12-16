@@ -58,7 +58,7 @@ export const TokenIcon = observer(({ token, wallet }: { token: Token; wallet?: O
     <div style={{ position: "relative", width: 40, height: 40 }}>
       <ImageView src={token.icon} alt={token.symbol} size={40} />
       <ImageView src={token.chainIcon} alt={token.symbol} size={14} style={{ position: "absolute", bottom: 0, right: 0 }} />
-      {token.chain === -4 && wallet?.type && <ImageView src={wallet.icon} alt={chains.get(wallet.type)?.name || ""} size={14} style={{ position: "absolute", bottom: 0, left: 0 }} />}
+      {token.chain === -4 && wallet?.type && <ImageView src={wallet.icon} alt={chains.getByType(wallet.type)?.[0]?.name || ""} size={14} style={{ position: "absolute", bottom: 0, left: 0 }} />}
     </div>
   );
 });

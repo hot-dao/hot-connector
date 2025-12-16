@@ -36,17 +36,10 @@ export default defineConfig({
 
 ```ts
 import { HotConnector } from "@hot-labs/kit";
-
-// Tree-shaking - use only chains what you need
-import stellar from "@hot-labs/kit/stellar";
-import solana from "@hot-labs/kit/solana";
-import cosmos from "@hot-labs/kit/cosmos";
-import near from "@hot-labs/kit/near";
-import ton from "@hot-labs/kit/ton";
-import evm from "@hot-labs/kit/evm";
+import { defaultConnectors } from "@hot-labs/kit/defaults";
 
 const connector = new HotConnector({
-  connectors: [near(), evm(), solana(), ton(), stellar(), cosmos()],
+  connectors: defaultConnectors,
 
   // optional
   walletConnect: {

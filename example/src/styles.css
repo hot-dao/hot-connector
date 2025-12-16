@@ -111,6 +111,8 @@ body {
     transition: background-color 0.3s ease;
     width: 100%;
     max-width: 15em;
+    border: 1px solid #333;
+    outline: none;
 
     &:hover {
         background-color: rgb(60, 60, 60);
@@ -132,3 +134,4 @@ body {
         width: 100%;
     }
 }
+

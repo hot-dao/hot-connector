@@ -13,10 +13,11 @@ interface ProtocolWallet {
 }
 
 export default class CosmosWallet extends OmniWallet {
+  readonly icon = "https://legacy.cosmos.network/presskit/cosmos-brandmark-dynamic-dark.svg";
   readonly type = WalletType.COSMOS;
 
-  constructor(readonly connector: CosmosConnector, readonly wallet: ProtocolWallet) {
-    super(connector);
+  constructor(readonly wallet: ProtocolWallet) {
+    super();
   }
 
   get address() {
@@ -29,11 +30,6 @@ export default class CosmosWallet extends OmniWallet {
 
   get omniAddress() {
     return "";
-  }
-
-  async disconnect() {
-    super.disconnect();
-    this.wallet.disconnect?.();
   }
 
   sendTransaction(signDoc: any): Promise<string> {

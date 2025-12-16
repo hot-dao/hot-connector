@@ -1,3 +1,5 @@
+import "@lottiefiles/dotlottie-wc";
+
 export { OmniWallet } from "./OmniWallet";
 export { OmniConnector } from "./OmniConnector";
 export { HotConnector } from "./HotConnector";

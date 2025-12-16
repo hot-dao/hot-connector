@@ -1,6 +1,6 @@
 import { observer } from "mobx-react-lite";
 import styled from "styled-components";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { LogoutIcon } from "../icons/logout";
 import { openBridge, openConnector } from "../router";
@@ -72,13 +72,15 @@ export const Profile = observer(({ hot, onClose }: { hot: HotConnector; onClose:
   return (
     <Popup onClose={onClose}>
       <div style={{ display: "flex", flexWrap: "wrap", width: "100%", gap: 8 }}>
-        {hot.wallets.map((wallet) => (
-          <WalletCard onClick={() => wallet.disconnect()}>
-            <ImageView src={wallet.icon} alt={wallet.connector.name} size={20} />
-            <div>{formatter.truncateAddress(wallet.address, 8)}</div>
-            <LogoutIcon width={20} height={20} />
-          </WalletCard>
-        ))}
+        {hot.connectors.map((connector) =>
+          connector.wallets.map((wallet) => (
+            <WalletCard onClick={() => connector.disconnect()}>
+              <ImageView src={wallet.icon} alt={connector.name} size={20} />
+              <div>{formatter.truncateAddress(wallet.address, 8)}</div>
+              <LogoutIcon width={20} height={20} />
+            </WalletCard>
+          ))
+        )}
 
         {hot.wallets.length < 6 && (
           <WalletCard style={{ paddingLeft: 12, paddingRight: 12 }} onClick={() => openConnector(hot)}>

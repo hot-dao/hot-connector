@@ -1,28 +1,23 @@
 import { NearWalletBase, SignMessageParams, SignedMessage, SignAndSendTransactionParams } from "@hot-labs/near-connect";
 import { base64, base58 } from "@scure/base";
 
-import { OmniConnector } from "../OmniConnector";
 import { OmniWallet } from "../OmniWallet";
 import { WalletType } from "../core/chains";
 import { ReviewFee } from "../core/bridge";
-import { rpc, TGAS } from "../core/nearRpc";
+import { rpc, TGAS } from "./rpc";
 import { Token } from "../core/token";
 import { Commitment } from "../core";
 
 export default class NearWallet extends OmniWallet {
+  readonly icon = "https://storage.herewallet.app/upload/73a44e583769f11112b0eff1f2dd2a560c05eed5f6d92f0c03484fa047c31668.png";
   readonly type = WalletType.NEAR;
 
-  constructor(readonly connector: OmniConnector, readonly address: string, readonly publicKey?: string, readonly wallet?: NearWalletBase) {
-    super(connector);
+  constructor(readonly address: string, readonly publicKey?: string, readonly wallet?: NearWalletBase) {
+    super();
   }
 
   get omniAddress() {
     return this.address;
-  }
-
-  async disconnect() {
-    await this.wallet?.signOut();
-    super.disconnect();
   }
 
   async fetchBalances(_: number, whitelist: string[]): Promise<Record<string, bigint>> {

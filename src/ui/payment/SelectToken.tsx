@@ -7,11 +7,11 @@ import { Token } from "../../core/token";
 import { HotConnector } from "../../HotConnector";
 import { OmniWallet } from "../../OmniWallet";
 import { Network, OmniToken } from "../../core/chains";
+import { tokens } from "../../core/tokens";
 import { PopupOption } from "../styles";
 import Popup from "../Popup";
 
 import { TokenCard, ImageView } from "./TokenCard";
-import { tokens } from "../../core/tokens";
 
 interface SelectTokenPopupProps {
   hot: HotConnector;

@@ -160,4 +160,15 @@ export const formatter = {
   wait(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   },
+
+  chunk(array: any[], size: number) {
+    return array.reduce((acc, item, index) => {
+      const chunkIndex = Math.floor(index / size);
+      if (!acc[chunkIndex]) {
+        acc[chunkIndex] = [];
+      }
+      acc[chunkIndex].push(item);
+      return acc;
+    }, []);
+  },
 };

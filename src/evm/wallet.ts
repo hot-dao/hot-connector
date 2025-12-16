@@ -22,7 +22,15 @@ class EvmWallet extends OmniWallet {
   readonly type = WalletType.EVM;
 
   constructor(readonly connector: OmniConnector, readonly address: string, readonly provider: EvmProvider) {
-    super(connector);
+    super();
+  }
+
+  async disconnect() {
+    await this.provider.request?.({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] });
+  }
+
+  get icon() {
+    return this.connector.icon;
   }
 
   private rpcs: Record<number, JsonRpcProvider> = {};
@@ -40,11 +48,6 @@ class EvmWallet extends OmniWallet {
 
   get omniAddress() {
     return this.address.toLowerCase();
-  }
-
-  async disconnect() {
-    this.provider.request?.({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] });
-    await super.disconnect();
   }
 
   async fetchBalances(chain: number, whitelist: string[]): Promise<Record<string, bigint>> {

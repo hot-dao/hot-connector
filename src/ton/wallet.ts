@@ -6,7 +6,6 @@ import { base58, base64, hex } from "@scure/base";
 
 import { OmniWallet } from "../OmniWallet";
 import { WalletType } from "../core/chains";
-import { OmniConnector } from "../OmniConnector";
 import { ReviewFee } from "../core/bridge";
 import { Token } from "../core/token";
 
@@ -19,10 +18,11 @@ interface ProtocolWallet {
 }
 
 class TonWallet extends OmniWallet {
+  readonly icon = "https://storage.herewallet.app/upload/3ffa61e237f8e38d390abd60200db8edff3ec2b20aad0cc0a8c7a8ba9c318124.png";
   readonly type = WalletType.TON;
 
-  constructor(readonly connector: OmniConnector, readonly wallet: ProtocolWallet) {
-    super(connector);
+  constructor(readonly wallet: ProtocolWallet) {
+    super();
   }
 
   get address() {

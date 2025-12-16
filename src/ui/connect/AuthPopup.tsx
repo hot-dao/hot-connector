@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { OmniWallet } from "../../OmniWallet";
 import Popup, { present } from "../Popup";
 import { PopupButton } from "../styles";
+import { chains } from "../../core";
 
 interface AuthIntentPopupProps {
   wallet: OmniWallet;
@@ -34,7 +35,7 @@ const AuthIntentPopupComponent: React.FC<AuthIntentPopupProps> = ({ wallet, onAp
   };
 
   return (
-    <Popup header={<p>Authorize {wallet.connector?.name}</p>} onClose={onReject}>
+    <Popup header={<p>Authorize wallet</p>} onClose={onReject}>
       <p style={{ textAlign: "center", color: "#fff" }}>To verify your account, you need to sign a message, this action is safe, the platform does not have access to your assets.</p>
       <PopupButton
         disabled={loading}

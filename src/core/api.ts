@@ -69,8 +69,15 @@ export class Api {
     return result.balances?.[chain] || [];
   }
 
+  async pendingPayment(commitment: Commitment, depositAddress: string) {
+    return await this.request(`/api/v1/wibe3/yield_intent_call`, {
+      body: JSON.stringify({ commitment, deposit_address: depositAddress }),
+      method: "POST",
+    });
+  }
+
   async publishIntents(signed: Record<string, any>[], hashes: string[]) {
-    return await this.request(`/api/v1/wibe3/solver-bus`, {
+    const result = await this.request(`/api/v1/wibe3/solver-bus`, {
       headers: { "Content-Type": "application/json" },
       method: "POST",
       body: JSON.stringify({
@@ -80,10 +87,12 @@ export class Api {
         jsonrpc: "2.0",
       }),
     });
+
+    return result.result;
   }
 
   async getIntentsStatus(intentHash: string) {
-    return await this.request(`/api/v1/wibe3/solver-bus`, {
+    const result = await this.request(`/api/v1/wibe3/solver-bus`, {
       headers: { "Content-Type": "application/json" },
       method: "POST",
       body: JSON.stringify({
@@ -93,6 +102,8 @@ export class Api {
         jsonrpc: "2.0",
       }),
     });
+
+    return result.result;
   }
 }
 

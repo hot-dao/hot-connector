@@ -1,13 +1,14 @@
 import { CosmosConfig, HotBridge, ReviewFee } from "@hot-labs/omni-sdk";
 import { chains, Network, WalletType } from "./chains";
 import { Intents } from "./Intents";
+import { Commitment } from "./types";
 
 export { ReviewFee, HotBridge };
 
 export const createHotBridge = () => {
   return new HotBridge({
-    publishIntents: async (signed: Record<string, any>[], hashes: string[] = []) => {
-      const hash = await Intents.publishSignedIntents(signed, hashes);
+    publishIntents: async (signed: Commitment[], hashes: string[] = []) => {
+      const hash = await Intents.publish(signed, hashes);
       return { sender: "intents.near", hash };
     },
 

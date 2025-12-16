@@ -23,13 +23,14 @@ import { ReviewFee } from "../core/bridge";
 import { Commitment } from "../core";
 import { api } from "../core/api";
 
-import { ISolanaProtocolWallet } from "./protocol";
+import { ISolanaProtocolWallet } from "./WalletStandard";
 
 class SolanaWallet extends OmniWallet {
+  readonly icon = "https://storage.herewallet.app/upload/8700f33153ad813e133e5bf9b791b5ecbeea66edca6b8d17aeccb8048eb29ef7.png";
   readonly type = WalletType.SOLANA;
 
-  constructor(readonly connector: OmniConnector, readonly wallet: ISolanaProtocolWallet) {
-    super(connector);
+  constructor(readonly wallet: ISolanaProtocolWallet) {
+    super();
   }
 
   getConnection() {
@@ -61,11 +62,6 @@ class SolanaWallet extends OmniWallet {
     const ATA = getAssociatedTokenAddressSync(new PublicKey(address), new PublicKey(this.address));
     const meta = await connection.getTokenAccountBalance(ATA);
     return BigInt(meta.value.amount);
-  }
-
-  async disconnect() {
-    await this.wallet.disconnect?.();
-    super.disconnect();
   }
 
   async buildTranferInstructions(token: Token, amount: bigint, receiver: string, fee: ReviewFee) {

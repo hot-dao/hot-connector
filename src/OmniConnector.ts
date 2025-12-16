@@ -30,8 +30,8 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O = {}> {
 
   private storage = new LocalStorage();
   protected events = new EventEmitter<{
-    connect: { wallet: T };
-    disconnect: { wallet: T };
+    connect: { wallet: T; connector: OmniConnector<T, O> };
+    disconnect: { wallet: T; connector: OmniConnector<T, O> };
   }>();
 
   protected wc: Promise<UniversalProvider> | null = null;
@@ -101,14 +101,14 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O = {}> {
 
   protected setWallet(wallet: T) {
     runInAction(() => this.wallets.push(wallet));
-    this.events.emit("connect", { wallet });
+    this.events.emit("connect", { wallet, connector: this });
     return wallet;
   }
 
   protected removeWallet() {
     runInAction(() => {
       const wallet = this.wallets.pop();
-      if (wallet) this.events.emit("disconnect", { wallet });
+      if (wallet) this.events.emit("disconnect", { wallet, connector: this });
     });
   }
 
@@ -116,7 +116,7 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O = {}> {
     runInAction(() => {
       const wallets = this.wallets;
       this.wallets = [];
-      wallets.forEach((wallet) => this.events.emit("disconnect", { wallet }));
+      wallets.forEach((wallet) => this.events.emit("disconnect", { wallet, connector: this }));
     });
   }
 
@@ -130,7 +130,7 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O = {}> {
 
   async getStorage(): Promise<{ type?: string; id?: string; address?: string; publicKey?: string }> {
     const data = await this.storage.get(`wibe3:${this.id}`);
-    if (!data) throw new Error("No storage found");
+    if (!data) return {};
     return JSON.parse(data);
   }
 
@@ -138,19 +138,19 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O = {}> {
     this.events.removeAllListeners();
   }
 
-  onConnect(handler: (payload: { wallet: T }) => void) {
+  onConnect(handler: (payload: { wallet: T; connector: OmniConnector<T, O> }) => void) {
     this.events.on("connect", handler);
     return () => this.events.off("connect", handler);
   }
 
-  onDisconnect(handler: (payload: { wallet: T }) => void) {
+  onDisconnect(handler: (payload: { wallet: T; connector: OmniConnector<T, O> }) => void) {
     this.events.on("disconnect", handler);
     return () => this.events.off("disconnect", handler);
   }
 
   async disconnect() {
     this.disconnectWalletConnect();
+    this.removeAllWallets();
     this.removeStorage();
-    this.removeWallet();
   }
 }

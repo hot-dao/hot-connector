@@ -4,7 +4,6 @@ import { rpc } from "@stellar/stellar-sdk";
 
 import { WalletType } from "../core/chains";
 import { OmniWallet } from "../OmniWallet";
-import { OmniConnector } from "../OmniConnector";
 import { ReviewFee } from "../core/bridge";
 import { formatter } from "../core/utils";
 import { Network } from "../core/chains";
@@ -12,9 +11,13 @@ import { Token } from "../core/token";
 import { Commitment } from "../core";
 
 interface ProtocolWallet {
+  address: string;
   signTransaction?: (transaction: Transaction) => Promise<{ signedTxXdr: string }>;
   signMessage?: (message: string) => Promise<{ signedMessage: string }>;
-  address: string;
+  rpc: {
+    callSoroban: (callback: (s: any) => Promise<any>) => Promise<any>;
+    callHorizon: (callback: (h: any) => Promise<any>) => Promise<any>;
+  };
 }
 
 export const ACCOUNT_FOR_SIMULATE = "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7";
@@ -28,14 +31,11 @@ export enum ASSET_CONTRACT_METHOD {
 }
 
 class StellarWallet extends OmniWallet {
+  readonly icon = "https://storage.herewallet.app/upload/1469894e53ca248ac6adceb2194e6950a13a52d972beb378a20bce7815ba01a4.png";
   readonly type = WalletType.STELLAR;
 
-  constructor(readonly connector: OmniConnector, readonly wallet: ProtocolWallet) {
-    super(connector);
-  }
-
-  get rpc() {
-    return this.connector.wibe3.hotBridge.stellar;
+  constructor(readonly wallet: ProtocolWallet) {
+    super();
   }
 
   get address() {
@@ -86,8 +86,8 @@ class StellarWallet extends OmniWallet {
     const asset = await this.getAssetFromContractId(token);
     const sendAmount = formatter.formatAmount(amount, 7);
 
-    const account = await this.connector.wibe3.hotBridge.stellar.callSoroban((s) => s.getAccount(this.address));
-    const baseFee = await this.connector.wibe3.hotBridge.stellar.callHorizon((h) => h.fetchBaseFee()).catch(() => +BASE_FEE);
+    const account = await this.wallet.rpc.callSoroban((s) => s.getAccount(this.address));
+    const baseFee = await this.wallet.rpc.callHorizon((h) => h.fetchBaseFee()).catch(() => +BASE_FEE);
     const builder = new TransactionBuilder(account, {
       memo: memo ? Memo.text(memo) : undefined,
       networkPassphrase: Networks.PUBLIC,
@@ -106,13 +106,13 @@ class StellarWallet extends OmniWallet {
         )
       );
 
-      const tx = await this.rpc.callSoroban((s) => s.prepareTransaction(builder.build() as any));
+      const tx = await this.wallet.rpc.callSoroban((s) => s.prepareTransaction(builder.build() as any));
       const fee = BigInt(Math.floor(baseFee * tx.operations.length));
       return { fee: new ReviewFee({ baseFee: fee, priorityFee: 0n, gasLimit: 1n, chain: Network.Stellar }), tx: tx as unknown as Transaction };
     }
 
     let needXlm = 0;
-    const receiverAccount = await this.rpc.callHorizon((h) => h.loadAccount(receiver)).catch(() => null);
+    const receiverAccount = await this.wallet.rpc.callHorizon((h) => h.loadAccount(receiver)).catch(() => null);
     const claimableBalance = Operation.createClaimableBalance({ amount: amount.toString(), claimants: [new Claimant(receiver)], asset });
 
     if (receiverAccount == null) {
@@ -154,7 +154,7 @@ class StellarWallet extends OmniWallet {
     if (!this.wallet.signTransaction) throw "not impl";
     const result = await this.wallet.signTransaction(transaction);
     const txObject = new Transaction(result.signedTxXdr, Networks.PUBLIC);
-    const { hash } = await this.rpc.callHorizon((t) => t.submitTransaction(txObject as any));
+    const { hash } = await this.wallet.rpc.callHorizon((t) => t.submitTransaction(txObject as any));
     return hash;
   }
 
@@ -197,7 +197,7 @@ class StellarWallet extends OmniWallet {
   async changeTrustline(address: string) {
     if (address === "native") return;
     const asset = await this.getAssetFromContractId(address);
-    const account = await this.rpc.callHorizon((h) => h.loadAccount(this.address));
+    const account = await this.wallet.rpc.callHorizon((h) => h.loadAccount(this.address));
     const trustlineOp = Operation.changeTrust({ asset: asset, source: this.address });
     const trustlineTx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: Networks.PUBLIC }) //
       .addOperation(trustlineOp)
@@ -215,7 +215,7 @@ class StellarWallet extends OmniWallet {
     }
 
     const tx = await this.buildSmartContactTx(ACCOUNT_FOR_SIMULATE, id, ASSET_CONTRACT_METHOD.NAME);
-    const result = (await this.rpc.callSoroban((s) => s.simulateTransaction(tx as any))) as unknown as rpc.Api.SimulateTransactionSuccessResponse;
+    const result = (await this.wallet.rpc.callSoroban((s) => s.simulateTransaction(tx as any))) as unknown as rpc.Api.SimulateTransactionSuccessResponse;
 
     const value = result?.result?.retval?.value();
     if (!value) throw "Asset not found";
@@ -227,7 +227,7 @@ class StellarWallet extends OmniWallet {
   }
 
   async buildSmartContactTx(publicKey: string, contactId: string, method: string, ...args: any[]) {
-    const account = await this.rpc.callSoroban((s) => s.getAccount(publicKey));
+    const account = await this.wallet.rpc.callSoroban((s) => s.getAccount(publicKey));
     const contract = new Contract(contactId);
     const builtTx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: Networks.PUBLIC });
 
@@ -244,7 +244,7 @@ class StellarWallet extends OmniWallet {
       Address.fromString(contract).toScVal()
     );
 
-    const result = (await this.rpc.callSoroban((s) => s.simulateTransaction(tx as any))) as unknown as rpc.Api.SimulateTransactionSuccessResponse;
+    const result = (await this.wallet.rpc.callSoroban((s) => s.simulateTransaction(tx as any))) as unknown as rpc.Api.SimulateTransactionSuccessResponse;
     if (result) return BigInt(this.i128ToInt(result.result?.retval.value() as xdr.Int128Parts));
     return 0n;
   }

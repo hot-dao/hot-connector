@@ -121,6 +121,11 @@ class EvmConnector extends OmniConnector<EvmWallet, { provider: EvmProvider }> {
 
     return await this.connectWallet(id, wallet.provider);
   }
+
+  async disconnect() {
+    this.wallets.forEach((w) => w.disconnect());
+    super.disconnect();
+  }
 }
 
 export default EvmConnector;

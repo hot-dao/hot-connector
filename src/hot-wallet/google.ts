@@ -50,12 +50,19 @@ class GoogleConnector extends OmniConnector<OmniWallet> {
     if (account.type === WalletType.STELLAR) {
       const signMessage = async (message: string) => request("stellar:signMessage", { message });
       const signTransaction = async (transaction: Transaction) => request("stellar:signTransaction", { transaction: transaction.toXDR() });
-      this.wallets.push(new StellarWallet(this, { address: account.address, signMessage, signTransaction }));
+      this.wallets.push(
+        new StellarWallet({
+          rpc: this.wibe3.hotBridge.stellar,
+          address: account.address,
+          signMessage,
+          signTransaction,
+        })
+      );
     }
 
     if (account.type === WalletType.TON) {
       this.setWallet(
-        new TonWallet(this, {
+        new TonWallet({
           sendTransaction: (params) => request("ton:sendTransaction", params),
           signData: (params) => request("ton:signData", params),
           account: { address: account.address, publicKey: account.publicKey },
@@ -65,21 +72,21 @@ class GoogleConnector extends OmniConnector<OmniWallet> {
 
     if (account.type === WalletType.NEAR) {
       this.setWallet(
-        new NearWallet(this, account.address, account.publicKey, {
+        new NearWallet(account.address, account.publicKey, {
           signAndSendTransaction: (params: SignAndSendTransactionParams) => request("near:signAndSendTransaction", params),
           signAndSendTransactions: (params: SignAndSendTransactionsParams) => request("near:signAndSendTransactions", params),
           signMessage: (params: SignMessageParams) => request("near:signMessage", params),
           getAccounts: async () => [{ accountId: account.address, publicKey: account.publicKey }],
           signIn: () => request("near:signIn", {}),
-          signOut: async () => {},
           manifest: {} as unknown as WalletManifest,
+          signOut: async () => {},
         }) as NearWallet
       );
     }
 
     if (account.type === WalletType.SOLANA) {
       this.setWallet(
-        new SolanaWallet(this, {
+        new SolanaWallet({
           sendTransaction: async (transaction: unknown, _: unknown, options?: unknown) => await request("solana:sendTransaction", { transaction, options }),
           signMessage: async (message: string) => await request("solana:signMessage", { message }),
           disconnect: async () => {},

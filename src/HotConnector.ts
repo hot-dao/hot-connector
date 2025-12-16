@@ -8,10 +8,11 @@ import { OmniToken } from "./core/chains";
 import { formatter } from "./core/utils";
 import { Intents } from "./core/Intents";
 import { tokens } from "./core/tokens";
-import { rpc } from "./core/nearRpc";
+import { rpc } from "./near/rpc";
 import { Token } from "./core/token";
 import { api } from "./core/api";
 
+import { defaultConnectors } from "./defaults";
 import type CosmosWallet from "./cosmos/wallet";
 import type NearWallet from "./near/wallet";
 import type EvmWallet from "./evm/wallet";
@@ -19,7 +20,7 @@ import type SolanaWallet from "./solana/wallet";
 import type StellarWallet from "./stellar/wallet";
 import type TonWallet from "./ton/wallet";
 
-import { openBridge, openConnector, openPayment, openProfile, openWalletPicker } from "./ui/router";
+import { openBridge, openConnector, openProfile, openWalletPicker } from "./ui/router";
 import { ConnectorType, OmniConnector } from "./OmniConnector";
 import { OmniWallet } from "./OmniWallet";
 import { Exchange } from "./exchange";
@@ -49,8 +50,8 @@ export class HotConnector {
   public exchange: Exchange;
 
   private events = new EventEmitter<{
-    connect: { wallet: OmniWallet };
-    disconnect: { wallet: OmniWallet };
+    connect: { wallet: OmniWallet; connector: OmniConnector };
+    disconnect: { wallet: OmniWallet; connector: OmniConnector };
     tokensUpdate: { tokens: Token[] };
   }>();
 
@@ -87,7 +88,8 @@ export class HotConnector {
     this.activity = new Activity(this);
 
     const connectors: OmniConnector[] = [];
-    const tasks = options?.connectors?.map(async (initConnector, index) => {
+    const configConnectors = options?.connectors || defaultConnectors;
+    const tasks = configConnectors.map(async (initConnector, index) => {
       const connector = await initConnector(this);
       connector.onConnect((payload) => this.events.emit("connect", payload));
       connector.onDisconnect((payload) => this.events.emit("disconnect", payload));
@@ -294,36 +296,16 @@ export class HotConnector {
     });
   }
 
-  async requestToken(token: OmniToken, amount: bigint | number): Promise<{ wallet: OmniWallet; token: Token; amount: bigint }> {
-    if (!token) throw new Error("Token not found");
-
-    const tokensList = await tokens.getTokens();
-    const ftToken = tokensList.find((t) => t.address === token)!;
-    const amountInt = typeof amount === "number" ? ftToken.int(amount) : amount;
-    const [existed] = this.walletsTokens.filter((t) => t.token.id === ftToken.id);
-
-    if (existed?.balance >= amountInt) return { token: ftToken, wallet: existed.wallet, amount: amountInt };
-
-    const needed = amountInt - (existed?.balance ?? 0n);
-    const result = await openPayment(this, ftToken, needed, Recipient.fromWallet(existed?.wallet));
-
-    const recipientWallet = this.wallets.find((w) => w.address === result.recipient.address);
-    if (!recipientWallet) throw new Error("Recipient not found");
-    const exist = await this.fetchToken(ftToken, recipientWallet);
-
-    return {
-      token: result.to,
-      wallet: recipientWallet,
-      amount: formatter.bigIntMin(exist, amountInt),
-    };
+  intentsBuilder(wallet?: OmniWallet) {
+    return new Intents(this).attachWallet(wallet);
   }
 
-  onConnect(handler: (payload: { wallet: OmniWallet }) => void) {
+  onConnect(handler: (payload: { wallet: OmniWallet; connector: OmniConnector }) => void) {
     this.events.on("connect", handler);
     return () => this.events.off("connect", handler);
   }
 
-  onDisconnect(handler: (payload: { wallet: OmniWallet }) => void) {
+  onDisconnect(handler: (payload: { wallet: OmniWallet; connector: OmniConnector }) => void) {
     this.events.on("disconnect", handler);
     return () => this.events.off("disconnect", handler);
   }
@@ -383,5 +365,15 @@ export class HotConnector {
     const connector = this.connectors.find((t) => t.type === ConnectorType.WALLET && t.walletTypes.includes(type));
     if (!connector) throw new Error("Connector not found");
     return openWalletPicker(connector);
+  }
+
+  async disconnect(wallet: WalletType | OmniWallet) {
+    const connector = this.connectors.find((t) => {
+      if (wallet instanceof OmniWallet) return t.wallets.includes(wallet);
+      return t.walletTypes.includes(wallet);
+    });
+
+    if (!connector) throw new Error("Connector not found");
+    await connector.disconnect();
   }
 }

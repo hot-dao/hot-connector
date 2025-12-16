@@ -125,7 +125,7 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
     const address = account.bech32Address;
 
     this.setStorage({ type: "walletconnect", id });
-    const wallet = new CosmosWallet(this, {
+    const wallet = new CosmosWallet({
       address: address,
       publicKeyHex: publicKey,
       disconnect: () => this.disconnectWalletConnect(),
@@ -170,7 +170,7 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
 
   async setKeplrWallet(keplr: Keplr, address: string, publicKey: string) {
     return this.setWallet(
-      new CosmosWallet(this, {
+      new CosmosWallet({
         address: address,
         publicKeyHex: publicKey,
         disconnect: () => keplr.disable(),

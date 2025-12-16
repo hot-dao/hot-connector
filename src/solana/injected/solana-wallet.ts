@@ -110,7 +110,7 @@ export class GhostWallet implements Wallet {
     this._connected();
   }
 
-  _on: StandardEventsOnMethod = (event, listener) => {
+  _on: StandardEventsOnMethod = (event: StandardEventsNames, listener: StandardEventsListeners[StandardEventsNames]) => {
     this._listeners[event]?.push(listener) || (this._listeners[event] = [listener]);
     return (): void => this._off(event, listener);
   };
@@ -152,7 +152,7 @@ export class GhostWallet implements Wallet {
     }
   };
 
-  _connect: StandardConnectMethod = async ({ silent } = {}) => {
+  _connect: StandardConnectMethod = async ({ silent }: { silent?: boolean } = {}) => {
     if (!this._account) await this._ghost.connect(silent ? { onlyIfTrusted: true } : undefined);
     this._connected();
     return { accounts: this.accounts };
@@ -162,7 +162,7 @@ export class GhostWallet implements Wallet {
     await this._ghost.disconnect();
   };
 
-  _signAndSendTransaction: SolanaSignAndSendTransactionMethod = async (...inputs) => {
+  _signAndSendTransaction: SolanaSignAndSendTransactionMethod = async (...inputs: any[]) => {
     if (!this._account) throw new Error("not connected");
 
     const outputs: SolanaSignAndSendTransactionOutput[] = [];
@@ -189,7 +189,7 @@ export class GhostWallet implements Wallet {
     return outputs;
   };
 
-  _signTransaction: SolanaSignTransactionMethod = async (...inputs) => {
+  _signTransaction: SolanaSignTransactionMethod = async (...inputs: any[]) => {
     if (!this._account) throw new Error("not connected");
 
     const outputs: SolanaSignTransactionOutput[] = [];
@@ -243,7 +243,7 @@ export class GhostWallet implements Wallet {
     return outputs;
   };
 
-  _signMessage: SolanaSignMessageMethod = async (...inputs) => {
+  _signMessage: SolanaSignMessageMethod = async (...inputs: any[]) => {
     if (!this._account) throw new Error("not connected");
 
     const outputs: SolanaSignMessageOutput[] = [];
@@ -264,7 +264,7 @@ export class GhostWallet implements Wallet {
     return outputs;
   };
 
-  _signIn: SolanaSignInMethod = async (...inputs) => {
+  _signIn: SolanaSignInMethod = async (...inputs: any[]) => {
     const outputs: SolanaSignInOutput[] = [];
 
     if (inputs.length > 1) {

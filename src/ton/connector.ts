@@ -69,7 +69,7 @@ class TonConnector extends OmniConnector<TonWallet> {
     tonConnect.onStatusChange(async (wallet) => {
       if (!wallet) return this.removeWallet();
       this.setWallet(
-        new TonWallet(this, {
+        new TonWallet({
           sendTransaction: (params) => tonConnect.sendTransaction(params),
           signData: (params) => tonConnect.signData(params),
           account: wallet.account,
@@ -106,10 +106,6 @@ class TonConnector extends OmniConnector<TonWallet> {
     }
 
     return tonConnect;
-  }
-
-  async createWallet(address: string) {
-    return new TonWallet(this, { account: { address } });
   }
 
   async connect(id: string) {

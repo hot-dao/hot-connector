@@ -1,9 +1,7 @@
-import { sha256 } from "@noble/hashes/sha2.js";
 import { hex } from "@scure/base";
 
 import { openAuthPopup } from "./ui/connect/AuthPopup";
-import { OmniToken, WalletType } from "./core/chains";
-import { OmniConnector } from "./OmniConnector";
+import { WalletType } from "./core/chains";
 import { Intents } from "./core/Intents";
 import { ReviewFee } from "./core/bridge";
 import { Token } from "./core/token";
@@ -11,37 +9,43 @@ import { Commitment } from "./core";
 import { api } from "./core/api";
 
 export abstract class OmniWallet {
-  constructor(readonly connector: OmniConnector) {}
-
   abstract address: string;
   abstract publicKey?: string;
   abstract omniAddress: string;
   abstract type: WalletType;
+  abstract icon: string;
 
-  async disconnect() {
-    if (!this.connector) throw new Error("Connector not implemented");
-    await this.connector.disconnect();
+  async depositNfts(nftIds: string[], receiver: string) {
+    // TODO
+  }
+
+  async withdrawNfts(nftIds: string[], receiver: string) {
+    // TODO
+  }
+
+  async getDepositNftsFee(nfts: string[]) {
+    return new ReviewFee({ chain: -4 });
+  }
+
+  async transferNft(nftId: string, receiver: string) {
+    // TODO
+  }
+
+  async getTranferNftFee(nftId: string, receiver: string) {
+    return new ReviewFee({ chain: -4 });
+  }
+
+  async getNfts(onLoad: (nfts: string[]) => void) {
+    // TODO
   }
 
   abstract transferFee(token: Token, receiver: string, amount: bigint): Promise<ReviewFee>;
   abstract transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }): Promise<string>;
-  abstract signIntents(intents: Record<string, any>[], options?: { nonce?: Uint8Array; deadline?: number }): Promise<Commitment>;
 
   abstract fetchBalance(chain: number, address: string): Promise<bigint>;
   abstract fetchBalances(chain?: number, whitelist?: string[]): Promise<Record<string, bigint>>;
 
-  async executeIntents(intents: Record<string, any>[], hashes: string[] = []) {
-    const signed = await this.signIntents(intents);
-    return await Intents.publishSignedIntents([signed], hashes);
-  }
-
-  get icon() {
-    return this.connector?.icon;
-  }
-
-  get intents() {
-    return new Intents(this.connector.wibe3).attachWallet(this);
-  }
+  abstract signIntents(intents: Record<string, any>[], options?: { nonce?: Uint8Array; deadline?: number }): Promise<Commitment>;
 
   async auth(intents?: Record<string, any>[]): Promise<string> {
     return openAuthPopup(this, async () => {
@@ -51,11 +55,6 @@ export abstract class OmniWallet {
       const signed = await this.signIntents(intents || [], { nonce: new Uint8Array(nonce) });
       return await api.auth(signed, seed);
     });
-  }
-
-  async pay({ token, amount, recipient, paymentId }: { token: OmniToken; amount: number; recipient: string; paymentId: string }) {
-    const nonce = new Uint8Array(sha256(new TextEncoder().encode(paymentId))).slice(0, 32);
-    return this.intents.attachNonce(nonce).transfer({ recipient, token, amount }).execute();
   }
 
   async waitUntilBalance(need: Record<string, bigint>, receiver: string, attempts = 0) {

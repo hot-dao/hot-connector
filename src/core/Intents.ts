@@ -1,14 +1,16 @@
 import { sha256 } from "@noble/hashes/sha2.js";
-import { ed25519 } from "@noble/curves/ed25519";
-import { base58, base64, hex } from "@scure/base";
 
 import type { HotConnector } from "../HotConnector";
 import type { OmniWallet } from "../OmniWallet";
-import type { TransferIntent, MtWithdrawIntent, FtWithdrawIntent, TokenDiffIntent, AuthCallIntent } from "./types";
+import { rpc } from "../near/rpc";
 
+import type { Intent, Commitment, TokenDiffIntent, MtWithdrawIntent, FtWithdrawIntent, NftWithdrawIntent, TransferIntent } from "./types";
 import { OmniToken } from "./chains";
 import { tokens } from "./tokens";
-import { rpc } from "./nearRpc";
+import { formatter } from "./utils";
+import { api } from "./api";
+
+import { openPayment } from "../ui/router";
 
 export const TGAS = 1000000000000n;
 
@@ -20,12 +22,12 @@ export class Intents {
   }
 
   hashes: string[] = [];
-  intents: (TransferIntent | MtWithdrawIntent | FtWithdrawIntent | TokenDiffIntent | AuthCallIntent)[] = [];
+  intents: Intent[] = [];
+  signer?: OmniWallet;
   nonce?: Uint8Array;
   deadline?: Date;
-  signer?: OmniWallet | { ed25519PrivateKey: Uint8Array; omniAddress?: string };
 
-  commitments: Record<string, any>[] = [];
+  commitments: Commitment[] = [];
   need = new Map<OmniToken, bigint>();
 
   addNeed(token: OmniToken, amount: bigint) {
@@ -86,7 +88,7 @@ export class Intents {
     return this;
   }
 
-  tokenDiff(args: Record<OmniToken, bigint | number>) {
+  tokenDiff(args: Record<string, bigint | number>) {
     const parse = (token: OmniToken, amount: bigint | number): [string, string] => {
       if (typeof amount === "number") return [token.toString(), tokens.get(token).int(amount).toString()];
       return [token.toString(), amount.toString()];
@@ -109,41 +111,40 @@ export class Intents {
     return this;
   }
 
-  addRawIntent(rawIntent: Record<string, any>) {
+  addRawIntent(rawIntent: Intent) {
     if (!rawIntent.intent) throw new Error("Intent must have 'intent' field");
     const intentType = rawIntent.intent;
 
     if (intentType === "token_diff") {
-      const diff = rawIntent.diff || rawIntent.token_diff;
-      if (!diff) throw new Error("token_diff intent must have 'diff' or 'token_diff' field");
-
       const tokenDiffArgs: Record<OmniToken, bigint> = {} as Record<OmniToken, bigint>;
-      for (const [token, amountStr] of Object.entries(diff)) {
+      for (const [token, amountStr] of Object.entries(rawIntent.diff)) {
         tokenDiffArgs[token as OmniToken] = BigInt(amountStr as string);
       }
       return this.tokenDiff(tokenDiffArgs);
     }
 
     if (intentType === "transfer") {
-      if (!rawIntent.tokens || !rawIntent.receiver_id) {
-        throw new Error("transfer intent must have 'tokens' and 'receiver_id' fields");
-      }
-
       const tokens: Record<OmniToken, bigint> = {} as Record<OmniToken, bigint>;
       for (const [token, amount] of Object.entries(rawIntent.tokens)) {
         tokens[token as OmniToken] = BigInt(amount as string);
       }
+
       return this.batchTransfer({
+        tgas: rawIntent.min_gas ? Number(BigInt(rawIntent.min_gas) / TGAS) : undefined,
         recipient: rawIntent.receiver_id,
-        tokens,
         memo: rawIntent.memo,
         msg: rawIntent.msg,
-        tgas: rawIntent.min_gas ? Number(BigInt(rawIntent.min_gas) / TGAS) : undefined,
+        tokens,
       });
     }
 
     if (intentType === "mt_withdraw") {
-      const intent: MtWithdrawIntent = {
+      for (let i = 0; i < rawIntent.amounts.length; i++) {
+        const token = `nep245:${rawIntent.token}:${rawIntent.token_ids[i]}` as OmniToken;
+        this.addNeed(token, BigInt(rawIntent.amounts[i]));
+      }
+
+      this.intents.push({
         intent: "mt_withdraw",
         amounts: rawIntent.amounts,
         receiver_id: rawIntent.receiver_id,
@@ -152,58 +153,71 @@ export class Intents {
         memo: rawIntent.memo,
         msg: rawIntent.msg,
         min_gas: rawIntent.min_gas,
-      };
-
-      for (let i = 0; i < rawIntent.amounts.length; i++) {
-        const token = `nep245:${rawIntent.token}:${rawIntent.token_ids[i]}` as OmniToken;
-        this.addNeed(token, BigInt(rawIntent.amounts[i]));
-      }
-
-      this.intents.push(intent);
+      } as MtWithdrawIntent);
       return this;
     }
 
     if (intentType === "ft_withdraw") {
-      if (!rawIntent.token || !rawIntent.receiver_id || !rawIntent.amount) {
-        throw new Error("ft_withdraw intent must have 'token', 'receiver_id', and 'amount' fields");
-      }
-
-      const token = `nep141:${rawIntent.token}` as OmniToken;
       return this.withdraw({
+        token: `nep141:${rawIntent.token}`,
         amount: BigInt(rawIntent.amount),
         receiver: rawIntent.receiver_id,
         memo: rawIntent.memo,
         msg: rawIntent.msg,
-        token,
       });
     }
 
     if (intentType === "auth_call") {
-      if (!rawIntent.contract_id || !rawIntent.msg || !rawIntent.attached_deposit || !rawIntent.min_gas) {
-        throw new Error("auth_call intent must have 'contract_id', 'msg', 'attached_deposit', and 'min_gas' fields");
-      }
-
       return this.authCall({
-        contractId: rawIntent.contract_id,
-        msg: rawIntent.msg,
         attachNear: BigInt(rawIntent.attached_deposit),
         tgas: Number(BigInt(rawIntent.min_gas) / TGAS),
+        contractId: rawIntent.contract_id,
+        msg: rawIntent.msg,
+      });
+    }
+
+    if (intentType === "add_public_key") {
+      return this.addPublicKey(rawIntent.public_key);
+    }
+
+    if (intentType === "remove_public_key") {
+      return this.removePublicKey(rawIntent.public_key);
+    }
+
+    if (intentType === "nft_withdraw") {
+      return this.withdraw({
+        token: rawIntent.token_id,
+        receiver: rawIntent.receiver_id,
+        memo: rawIntent.memo,
+        msg: rawIntent.msg,
+        tgas: rawIntent.min_gas ? Number(BigInt(rawIntent.min_gas) / TGAS) : undefined,
+        amount: 1n,
       });
     }
 
     throw new Error(`Unsupported intent type: ${intentType}`);
   }
 
-  withdraw(args: { token: OmniToken; amount: number | bigint; receiver: string; memo?: string; msg?: string; tgas?: number }) {
+  addPublicKey(publicKey: string) {
+    this.intents.push({ intent: "add_public_key", public_key: publicKey });
+    return this;
+  }
+
+  removePublicKey(publicKey: string) {
+    this.intents.push({ intent: "remove_public_key", public_key: publicKey });
+    return this;
+  }
+
+  withdraw(args: { token: string; amount: number | bigint; receiver: string; memo?: string; msg?: string; tgas?: number }) {
     const omniToken = tokens.get(args.token);
     const amount = (typeof args.amount === "number" ? omniToken.int(args.amount) : args.amount).toString();
     const [standart, ...tokenParts] = args.token.split(":");
-    this.addNeed(args.token, BigInt(amount));
+    this.addNeed(args.token as OmniToken, BigInt(amount));
 
     if (standart === "nep245") {
       const mtContract = tokenParts[0];
       const tokenId = tokenParts.slice(1).join(":");
-      const intent: MtWithdrawIntent = {
+      this.intents.push({
         intent: "mt_withdraw",
         amounts: [amount],
         receiver_id: args.receiver,
@@ -212,23 +226,31 @@ export class Intents {
         memo: args.memo,
         msg: args.msg,
         min_gas: args.tgas ? (BigInt(args.tgas) * TGAS).toString() : undefined,
-      };
-
-      this.intents.push(intent);
+      } as MtWithdrawIntent);
       return this;
     }
 
     if (standart === "nep141") {
-      const intent: FtWithdrawIntent = {
+      this.intents.push({
         intent: "ft_withdraw",
         receiver_id: args.receiver,
         token: tokenParts.join(":"),
         amount: amount,
         memo: args.memo,
         msg: args.msg,
-      };
+      } as FtWithdrawIntent);
+      return this;
+    }
 
-      this.intents.push(intent);
+    if (standart === "nep171") {
+      this.intents.push({
+        intent: "nft_withdraw",
+        receiver_id: args.receiver,
+        token_id: tokenParts.join(":"),
+        min_gas: args.tgas ? (BigInt(args.tgas) * TGAS).toString() : undefined,
+        memo: args.memo,
+        msg: args.msg,
+      } as NftWithdrawIntent);
       return this;
     }
 
@@ -240,7 +262,7 @@ export class Intents {
     return this;
   }
 
-  attachWallet(wallet: OmniWallet) {
+  attachWallet(wallet?: OmniWallet) {
     this.signer = wallet;
     return this;
   }
@@ -265,10 +287,15 @@ export class Intents {
     return this;
   }
 
-  take(token: OmniToken, amount: number | bigint) {
+  attachCommitment(commitment: Commitment) {
+    this.commitments.push(commitment);
+    return this;
+  }
+
+  take(token: string, amount: number | bigint) {
     const intAmount = typeof amount === "number" ? tokens.get(token).int(amount) : amount;
 
-    this.addNeed(token, intAmount);
+    // this.addNeed(token, -intAmount); Do we need to add the need here?
     const tokenDiff = this.intents.find((intent) => intent.intent === "token_diff");
 
     if (tokenDiff) tokenDiff.diff[token.toString()] = intAmount.toString();
@@ -276,10 +303,10 @@ export class Intents {
     return this;
   }
 
-  give(token: OmniToken, amount: number | bigint) {
+  give(token: string, amount: number | bigint) {
     const intAmount = typeof amount === "number" ? tokens.get(token).int(amount) : amount;
 
-    this.addNeed(token, -intAmount);
+    this.addNeed(token as OmniToken, intAmount);
     const tokenDiff = this.intents.find((intent) => intent.intent === "token_diff");
 
     if (tokenDiff) tokenDiff.diff[token.toString()] = (-intAmount).toString();
@@ -287,113 +314,70 @@ export class Intents {
     return this;
   }
 
-  async signRaw({ ed25519PrivateKey, intentsAddress, checkTokens }: { ed25519PrivateKey: Uint8Array; intentsAddress?: string; checkTokens?: boolean }) {
-    if (checkTokens) {
-      await this.checkRequiredTokens();
-    }
-
-    const publicKey = ed25519.getPublicKey(ed25519PrivateKey);
-    const nonce = new Uint8Array(this.nonce || window.crypto.getRandomValues(new Uint8Array(32)));
-
-    const message = JSON.stringify({
-      deadline: this.deadline ? new Date(this.deadline).toISOString() : "2100-01-01T00:00:00.000Z",
-      nonce: base64.encode(nonce),
-      verifying_contract: "intents.near",
-      signer_id: intentsAddress || hex.encode(publicKey).toLowerCase(),
-      intents: this.intents,
-    });
-
-    return {
-      signature: `ed25519:${base58.encode(ed25519.sign(message, ed25519PrivateKey))}`,
-      public_key: `ed25519:${base58.encode(publicKey)}`,
-      standard: "raw_ed25519",
-      payload: message,
-    };
-  }
-
-  async attachCommitment(commitment: Record<string, any>) {
-    this.commitments.push(commitment);
-    return this;
-  }
-
-  async attachSigner(signer: OmniWallet | { ed25519PrivateKey: Uint8Array; omniAddress?: string }) {
-    this.signer = signer;
-    return this;
-  }
-
-  async checkRequiredTokens() {
-    if (this.wibe3 == null) return;
-    for (const [token, needAmount] of this.need.entries()) {
-      if (needAmount <= 0n) continue;
-      await this.wibe3.requestToken(token, needAmount);
-    }
-  }
-
-  async sign(params = { checkTokens: true }) {
+  async signSequence() {
     const signer = this.signer;
     if (!signer) throw new Error("No signer attached");
     if (!signer.omniAddress) throw new Error("No omni address");
 
-    if ("ed25519PrivateKey" in signer) {
-      return await this.signRaw({
-        ed25519PrivateKey: signer.ed25519PrivateKey,
-        intentsAddress: signer.omniAddress,
-        checkTokens: params.checkTokens,
-      });
+    const commitments: Commitment[] = [];
+    for (const intent of this.intents) {
+      const signed = await signer.signIntents([intent], { deadline: this.deadline ? +this.deadline : undefined, nonce: this.nonce });
+      commitments.push(signed);
     }
 
-    if (params.checkTokens) {
-      await this.checkRequiredTokens();
-    }
+    return commitments;
+  }
 
+  async sign() {
+    const signer = this.signer;
+    if (!signer) throw new Error("No signer attached");
+    if (!signer.omniAddress) throw new Error("No omni address");
     return await signer.signIntents(this.intents, {
       deadline: this.deadline ? +this.deadline : undefined,
       nonce: this.nonce,
     });
   }
 
-  async simulate(params = { checkTokens: true }) {
-    const signed = await this.sign(params);
+  async simulate() {
+    if (!this.signer) throw new Error("No signer attached");
+    const signed = await this.sign();
     return await Intents.simulateIntents([signed]);
   }
 
-  async execute(params = { checkTokens: true }) {
-    const signed = await this.sign(params);
-    const hash = await Intents.publishSignedIntents([...this.commitments, signed], this.hashes);
-    await rpc.waitTransactionResult(hash, "intents.near");
-    return hash;
+  async execute() {
+    if (!this.wibe3) throw new Error("No wibe3 attached");
+    return openPayment(this.wibe3, this);
   }
 
-  static async publishSignedIntents(signed: Record<string, any>[], hashes: string[] = []): Promise<string> {
-    const res = await fetch("https://api0.herewallet.app/api/v1/evm/intent-solver", {
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-      body: JSON.stringify({
-        params: [{ signed_datas: signed, quote_hashes: hashes }],
-        method: "publish_intents",
-        id: "dontcare",
-        jsonrpc: "2.0",
-      }),
-    });
+  async executeBatch(params = { checkTokens: true, chunkSize: this.intents.length, onSuccess: (bucket: number, hash: string) => {} }) {
+    if (!this.signer) throw new Error("No signer attached");
+    const batches = formatter.chunk(this.intents, params.chunkSize);
+    let index = 0;
 
-    const { result } = await res.json();
+    const hashes: string[] = [];
+    for (const batch of batches) {
+      const signed = await this.signer.signIntents(batch, {
+        deadline: this.deadline ? +this.deadline : undefined,
+        nonce: this.nonce,
+      });
+
+      const hash = await Intents.publish([...this.commitments, signed], this.hashes);
+      await rpc.waitTransactionResult(hash, "intents.near");
+      params.onSuccess(index++, hash);
+      hashes.push(hash);
+    }
+
+    return hashes;
+  }
+
+  static async publish(signed: Commitment[], hashes: string[] = []): Promise<string> {
+    const result = await api.publishIntents(signed, hashes);
     if (result.status === "FAILED") throw result.reason;
     const intentResult = result.intent_hashes[0];
 
     const getStatus = async () => {
-      const statusRes = await fetch("https://api0.herewallet.app/api/v1/evm/intent-solver", {
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-        body: JSON.stringify({
-          params: [{ intent_hash: intentResult }],
-          method: "get_status",
-          id: "dontcare",
-          jsonrpc: "2.0",
-        }),
-      });
-
-      const { result } = await statusRes.json();
-      return result;
+      const statusResult = await api.getIntentsStatus(intentResult);
+      return statusResult;
     };
 
     const fetchResult = async () => {
@@ -417,7 +401,7 @@ export class Intents {
     });
   }
 
-  static async simulateIntents(signed: Record<string, any>[]) {
+  static async simulateIntents(signed: Commitment[]) {
     return await rpc.viewMethod({
       args: { signed: signed },
       methodName: "simulate_intents",

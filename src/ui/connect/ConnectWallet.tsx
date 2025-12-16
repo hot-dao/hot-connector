@@ -13,9 +13,10 @@ import Popup from "../Popup";
 interface MultichainPopupProps {
   hot: HotConnector;
   onClose: () => void;
+  title?: string;
 }
 
-export const Connector = observer(({ hot, onClose }: MultichainPopupProps) => {
+export const Connector = observer(({ hot, onClose, title }: MultichainPopupProps) => {
   const onechain = hot.connectors.filter((t) => t.type === ConnectorType.WALLET);
   const social = hot.connectors.filter((t) => t.type === ConnectorType.SOCIAL);
 
@@ -26,7 +27,7 @@ export const Connector = observer(({ hot, onClose }: MultichainPopupProps) => {
   };
 
   return (
-    <Popup header={<p>Select network</p>} onClose={onClose}>
+    <Popup header={<p>{title || "Select network"}</p>} onClose={onClose}>
       {onechain.map((t) => (
         <PopupOption key={t.id} onClick={() => selectConnector(t)}>
           <ImageView src={t.icon} alt={t.name} size={44} />

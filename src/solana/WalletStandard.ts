@@ -1,7 +1,5 @@
 import type { Connection, Transaction, VersionedTransaction } from "@solana/web3.js";
-import { SolanaSignAndSendTransactionMethod, SolanaSignMessageMethod, SolanaSignTransactionMethod } from "@solana/wallet-standard-features";
 import type { Wallet } from "@wallet-standard/base";
-import { base58 } from "@scure/base";
 
 export interface ISolanaProtocolWallet {
   address: string;
@@ -41,7 +39,7 @@ class SolanaProtocolWallet implements ISolanaProtocolWallet {
   async sendTransaction(transaction: Transaction | VersionedTransaction, connection: Connection, options?: any): Promise<string> {
     const account = await this.getAccount();
     const features = this.wallet.features as any;
-    const signTx = features["solana:signTransaction"]?.signTransaction as SolanaSignTransactionMethod;
+    const signTx = features["solana:signTransaction"]?.signTransaction;
     const [signed] = await signTx({ account, chain: account.chains[0], transaction: transaction.serialize() });
     const signedTx = signed.signedTransaction as Transaction | VersionedTransaction | Uint8Array;
     const raw = signedTx instanceof Uint8Array ? signedTx : (signedTx as any).serialize();
@@ -52,7 +50,7 @@ class SolanaProtocolWallet implements ISolanaProtocolWallet {
   async signMessage(message: string) {
     const account = await this.getAccount();
     const features = this.wallet.features as any;
-    const signMessageFeature = features["solana:signMessage"]?.signMessage as SolanaSignMessageMethod;
+    const signMessageFeature = features["solana:signMessage"]?.signMessage;
 
     if (!signMessageFeature) throw new Error("Wallet does not support solana:signMessage");
     const [result] = await signMessageFeature({ account, message: new TextEncoder().encode(message) });

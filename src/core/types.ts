@@ -40,9 +40,30 @@ export interface AuthCallIntent {
   intent: "auth_call";
 }
 
+export interface AddPublicKeyIntent {
+  intent: "add_public_key";
+  public_key: string;
+}
+
+export interface RemovePublicKeyIntent {
+  intent: "remove_public_key";
+  public_key: string;
+}
+
+export interface NftWithdrawIntent {
+  intent: "nft_withdraw";
+  token_id: string;
+  receiver_id: string;
+  memo?: string;
+  msg?: string;
+  min_gas?: string;
+}
+
 export interface Commitment {
   signature: string;
   public_key?: string;
   payload: Record<string, any> | string;
   standard: string;
 }
+
+export type Intent = TransferIntent | MtWithdrawIntent | FtWithdrawIntent | TokenDiffIntent | AuthCallIntent | AddPublicKeyIntent | RemovePublicKeyIntent | NftWithdrawIntent;

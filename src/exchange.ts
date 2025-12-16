@@ -300,7 +300,7 @@ export class Exchange {
     };
   }
 
-  async makeSwap(review: BridgeReview, pending: { log: (message: string) => void }) {
+  async makeSwap(review: BridgeReview, pending: { log: (message: string) => void }): Promise<{ review: BridgeReview; processing?: () => Promise<BridgeReview> }> {
     const { sender, recipient } = review;
 
     if (review.qoute === "withdraw") {
@@ -309,7 +309,7 @@ export class Exchange {
       const recipientWallet = this.wibe3.wallets.find((w) => w.address === recipient.address);
       if (recipientWallet) this.wibe3.fetchToken(review.to, recipientWallet);
       this.wibe3.fetchToken(review.from, sender);
-      return review;
+      return { review };
     }
 
     if (review.qoute === "deposit") {
@@ -319,7 +319,7 @@ export class Exchange {
 
       const recipientWallet = this.wibe3.wallets.find((w) => w.address === recipient.address);
       if (recipientWallet) this.wibe3.fetchToken(review.to, recipientWallet);
-      return review;
+      return { review };
     }
 
     if (sender !== "qr") {
@@ -335,7 +335,8 @@ export class Exchange {
       const depositAddress = review.qoute.depositAddress!;
       let hash = "";
       if (review.from.chain === Network.Hot) {
-        hash = await sender.intents
+        hash = await this.wibe3
+          .intentsBuilder(sender)
           .transfer({
             amount: review.amountIn,
             token: review.from.address as OmniToken,
@@ -347,31 +348,30 @@ export class Exchange {
           receiver: depositAddress,
           amount: review.amountIn,
           comment: review.qoute.depositMemo,
-          token: review.from,
           gasFee: review.fee ?? undefined,
+          token: review.from,
         });
       }
 
-      pending.log("Submitting tx");
       this.wibe3.fetchToken(review.from, sender);
-      await OneClickService.submitDepositTx({ txHash: hash, depositAddress }).catch(() => {});
+      OneClickService.submitDepositTx({ txHash: hash, depositAddress }).catch(() => {});
     }
 
-    if (sender !== "qr") {
-      wait(1000).then(() => this.wibe3.fetchToken(review.to, sender));
-    }
+    return {
+      review,
+      processing: async () => {
+        const recipientWallet = this.wibe3.wallets.find((w) => w.address === recipient.address);
+        if (!recipientWallet) return await this.processing(review);
 
-    pending.log("Processing...");
-    const recipientWallet = this.wibe3.wallets.find((w) => w.address === recipient.address);
-    if (!recipientWallet) return await this.processing(review);
+        const beforeBalance = await this.wibe3.fetchToken(review.to, recipientWallet).catch(() => null);
+        if (!beforeBalance) return await this.processing(review);
 
-    const beforeBalance = await this.wibe3.fetchToken(review.to, recipientWallet).catch(() => null);
-    if (!beforeBalance) return await this.processing(review);
-
-    return await Promise.race([
-      this.waitBalance(review.to, recipientWallet, beforeBalance, review),
-      this.processing(review), //
-    ]);
+        return await Promise.race([
+          this.waitBalance(review.to, recipientWallet, beforeBalance, review),
+          this.processing(review), //
+        ]);
+      },
+    };
   }
 
   async waitBalance(to: Token, wallet: OmniWallet, beforeBalance: bigint, review: BridgeReview): Promise<BridgeReview> {

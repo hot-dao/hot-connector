@@ -5,6 +5,7 @@ import { Token } from "../core/token";
 import { OmniWallet } from "../OmniWallet";
 import { WalletType } from "../core/chains";
 import { Recipient } from "../core/recipient";
+import { Intents } from "../core/Intents";
 
 import { present } from "./Popup";
 import { Payment } from "./payment/Payment";
@@ -19,16 +20,14 @@ import { SelectSender } from "./payment/SelectSender";
 import { SelectRecipient } from "./payment/SelectRecipient";
 import { WCRequest } from "./connect/WCRequest";
 
-export const openPayment = (connector: HotConnector, token: Token, amount: bigint, recipient?: Recipient) => {
-  return new Promise<Promise<BridgeReview>>((resolve, reject) => {
+export const openPayment = (connector: HotConnector, intents: Intents) => {
+  return new Promise<Promise<string>>((resolve, reject) => {
     present((close) => (
       <Payment //
         onClose={() => (close(), reject(new Error("User rejected")))}
-        onProcess={(task) => (close(), resolve(task))}
+        onConfirm={resolve}
         connector={connector}
-        token={token}
-        amount={amount}
-        recipient={recipient}
+        intents={intents}
       />
     ));
   });
