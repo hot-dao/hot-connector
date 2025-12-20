@@ -1,6 +1,8 @@
 import { JsonRpcProvider } from "@near-js/providers";
 import { getErrorTypeFromErrorMessage, parseRpcError } from "@near-js/utils";
 import { TypedError, FinalExecutionOutcome } from "@near-js/types";
+import { base64 } from "@scure/base";
+
 import { api } from "../core/api";
 import { Network } from "../core";
 
@@ -37,7 +39,7 @@ export class NearRpc extends JsonRpcProvider {
   }
 
   async viewMethod(args: { contractId: string; methodName: string; args: any }) {
-    const payload = Buffer.from(JSON.stringify(args.args), "utf8").toString("base64");
+    const payload = base64.encode(new TextEncoder().encode(JSON.stringify(args.args)));
     const data: any = await rpc.query({
       args_base64: payload,
       finality: "optimistic",

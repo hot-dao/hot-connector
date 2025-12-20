@@ -8,9 +8,10 @@ import { OmniToken } from "./core/chains";
 import { formatter } from "./core/utils";
 import { Intents } from "./core/Intents";
 import { tokens } from "./core/tokens";
-import { rpc } from "./near/rpc";
+import { Telemetry } from "./core/telemetry";
 import { Token } from "./core/token";
 import { api } from "./core/api";
+import { rpc } from "./near/rpc";
 
 import { defaultConnectors } from "./defaults";
 import type CosmosWallet from "./cosmos/wallet";
@@ -44,6 +45,7 @@ interface HotConnectorOptions {
 export class HotConnector {
   public connectors: OmniConnector[] = [];
   public balances: Record<string, Record<string, bigint>> = {};
+  public telemetry: Telemetry;
 
   public activity: Activity;
   public hotBridge: HotBridge;
@@ -83,6 +85,7 @@ export class HotConnector {
     this.settings.metadata = options?.walletConnect?.metadata ?? undefined;
     Object.values(options?.chains ?? {}).forEach((chain) => chains.register(chain));
 
+    this.telemetry = new Telemetry(this);
     this.hotBridge = createHotBridge();
     this.exchange = new Exchange(this);
     this.activity = new Activity(this);

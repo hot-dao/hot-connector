@@ -30,8 +30,8 @@ export const deleteRequest = async (id: string) => {
 };
 
 export const computeRequestId = async (request: object) => {
-  const query = base58.encode(Buffer.from(JSON.stringify({ ...request, _id: uuid4() }), "utf8"));
-  const hashsum = sha1(Buffer.from(query, "utf8"));
+  const query = base58.encode(new TextEncoder().encode(JSON.stringify({ ...request, _id: uuid4() })));
+  const hashsum = sha1(new TextEncoder().encode(query));
   const id = Buffer.from(hashsum).toString("base64");
   const requestId = id.replaceAll("/", "_").replaceAll("-", "+").slice(0, 13);
   return { requestId, query };

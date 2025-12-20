@@ -114,6 +114,13 @@ export class Api {
     return result.result;
   }
 
+  async publishTelemetry(events: { event: string; value_str?: string; value_float?: number; ts: number }[], accountId: string) {
+    await this.request(`/api/v1/wibe3/telemetry/event`, {
+      body: JSON.stringify({ events, account_id: accountId }),
+      method: "POST",
+    });
+  }
+
   async getIntentsStatus(intentHash: string) {
     const result = await this.request(`/api/v1/wibe3/solver-bus`, {
       method: "POST",

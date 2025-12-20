@@ -115,7 +115,10 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
 
       if (flow?.review == null) {
         await intents.sign();
-        return setFlow({ step: "success", loading: false });
+        await onConfirm({});
+        setFlow({ loading: false, step: "success" });
+        setTimeout(() => close(), 2000);
+        return;
       }
 
       const result = await connector.exchange.makeSwap(flow.review, { log: () => {} });

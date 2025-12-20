@@ -47,16 +47,16 @@ export const openPayment = (
   return new Promise<void>((resolve, reject) => {
     present((close) => (
       <Payment //
-        close={() => (close(), resolve())}
-        onReject={() => (close(), reject(new Error("User rejected")))}
-        onConfirm={(args) => onConfirm(args).finally(() => close())}
+        title={title}
+        intents={intents}
+        connector={connector}
+        needAmount={needAmount}
         prepaidAmount={prepaidAmount}
         allowedTokens={allowedTokens}
         payableToken={payableToken}
-        needAmount={needAmount}
-        connector={connector}
-        intents={intents}
-        title={title}
+        close={() => (close(), resolve())}
+        onReject={() => (close(), reject(new Error("User rejected")))}
+        onConfirm={onConfirm}
       />
     ));
   });
