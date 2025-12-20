@@ -27,7 +27,7 @@ interface PaymentProps {
   needAmount: bigint;
   connector: HotConnector;
   onReject: (message: string) => void;
-  onConfirm: (args: { depositQoute: BridgeReview | "direct"; processing?: () => Promise<BridgeReview> }) => Promise<void>;
+  onConfirm: (args: { depositQoute?: BridgeReview; processing?: () => Promise<BridgeReview> }) => Promise<void>;
   close: () => void;
 }
 
@@ -66,12 +66,12 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
     token?: Token;
     wallet?: OmniWallet;
     commitment?: Commitment;
-    review?: BridgeReview | "direct";
-    success?: { depositQoute: BridgeReview | "direct"; processing?: () => Promise<BridgeReview> };
+    review?: BridgeReview;
+    success?: { depositQoute?: BridgeReview; processing?: () => Promise<BridgeReview> };
     step?: "selectToken" | "sign" | "transfer" | "success" | "error" | "loading";
     loading?: boolean;
     error?: any;
-  } | null>(needAmount === 0n ? { step: "sign", review: "direct" } : null);
+  } | null>(needAmount === 0n ? { step: "transfer" } : null);
 
   const paymentTitle = title || `Pay ${payableToken.readable(needAmount)} ${payableToken.symbol}`;
 
@@ -114,8 +114,9 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
       if (!flow?.review) throw new Error("Review not found");
       setFlow((t) => (t ? { ...t, step: "loading" } : null));
 
-      if (flow.review == "direct") {
-        return setFlow({ step: "success", loading: false, success: { depositQoute: "direct" } });
+      if (flow.review == null) {
+        await intents.sign();
+        return setFlow({ step: "success", loading: false });
       }
 
       const result = await connector.exchange.makeSwap(flow.review, { log: () => {} });
@@ -182,11 +183,11 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
             hot={connector}
             token={flow.token}
             wallet={flow.wallet}
-            amount={flow.review === "direct" ? needAmount : flow.review?.amountIn ?? 0n}
+            amount={flow.review == null ? needAmount : flow.review?.amountIn ?? 0n}
           />
         )}
 
-        <PopupButton style={{ marginTop: 24 }} disabled={!flow?.review} onClick={confirmPaymentStep}>
+        <PopupButton style={{ marginTop: 24 }} onClick={confirmPaymentStep}>
           {flow?.loading ? "Confirming..." : "Confirm transaction"}
         </PopupButton>
       </Popup>
@@ -208,7 +209,7 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
             token={flow.token}
             wallet={flow.wallet}
             rightControl={flow.review ? undefined : rightControl}
-            amount={flow.review === "direct" ? needAmount : flow.review?.amountIn ?? 0n}
+            amount={flow.review == null ? needAmount : flow.review?.amountIn ?? 0n}
           />
         )}
 
@@ -225,25 +226,32 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
     );
   }
 
+  const recommendedTokens = connector.walletsTokens.filter((t) => t.token.symbol === "USDT" || t.token.symbol === "USDC");
+  const otherTokens = connector.walletsTokens.filter((t) => t.token.symbol !== "USDT" && t.token.symbol !== "USDC");
+
+  const renderToken = (token: Token, wallet: OmniWallet, balance: bigint) => {
+    if (token.id === payableToken.id) return null;
+    const availableBalance = token.float(balance) - token.reserve;
+
+    // Allow only tokens in the allowedTokens list
+    if (allowedTokens != null && !allowedTokens?.includes(token.omniAddress)) return null;
+
+    // same token as need and enough balance is direct deposit
+    if (token.originalChain === payableToken.originalChain && token.originalAddress === payableToken.originalAddress && availableBalance >= payableToken.float(needAmount)) {
+      return <TokenCard key={token.id} token={token} onSelect={selectToken} hot={connector} wallet={wallet} />;
+    }
+
+    if (availableBalance * token.usd <= payableToken.usd * payableToken.float(needAmount) * (1 + PAY_SLIPPAGE)) return null;
+    return <TokenCard key={token.id} token={token} onSelect={selectToken} hot={connector} wallet={wallet} />;
+  };
+
   return (
     <Popup onClose={() => onReject("closed")} header={<p>{title}</p>}>
       <HorizontalStepper steps={[{ label: "Select" }, { label: "Review" }, { label: "Confirm" }]} currentStep={0} />
 
-      {connector.walletsTokens.map(({ token, wallet, balance }) => {
-        if (token.id === payableToken.id) return null;
-        const availableBalance = token.float(balance) - token.reserve;
+      {recommendedTokens.map(({ token, wallet, balance }) => renderToken(token, wallet, balance))}
+      {otherTokens.map(({ token, wallet, balance }) => renderToken(token, wallet, balance))}
 
-        // Allow only tokens in the allowedTokens list
-        if (allowedTokens != null && !allowedTokens?.includes(token.omniAddress)) return null;
-
-        // same token as need and enough balance is direct deposit
-        if (token.originalChain === payableToken.originalChain && token.originalAddress === payableToken.originalAddress && availableBalance >= payableToken.float(needAmount)) {
-          return <TokenCard key={token.id} token={token} onSelect={selectToken} hot={connector} wallet={wallet} />;
-        }
-
-        if (availableBalance * token.usd <= payableToken.usd * payableToken.float(needAmount) * (1 + PAY_SLIPPAGE)) return null;
-        return <TokenCard key={token.id} token={token} onSelect={selectToken} hot={connector} wallet={wallet} />;
-      })}
       <PopupOption onClick={() => openConnector(connector)}>
         <div style={{ width: 44, height: 44, borderRadius: 16, background: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <WalletIcon />

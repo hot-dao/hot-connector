@@ -41,15 +41,15 @@ export const openPayment = (
     prepaidAmount: bigint;
     payableToken: Token;
     needAmount: bigint;
-    onConfirm: (args: { depositQoute: BridgeReview | "direct"; processing?: () => Promise<BridgeReview> }) => Promise<void>;
+    onConfirm: (args: { depositQoute?: BridgeReview; processing?: () => Promise<BridgeReview> }) => Promise<void>;
   }
 ) => {
   return new Promise<void>((resolve, reject) => {
     present((close) => (
       <Payment //
-        onConfirm={onConfirm}
         close={() => (close(), resolve())}
         onReject={() => (close(), reject(new Error("User rejected")))}
+        onConfirm={(args) => onConfirm(args).finally(() => close())}
         prepaidAmount={prepaidAmount}
         allowedTokens={allowedTokens}
         payableToken={payableToken}

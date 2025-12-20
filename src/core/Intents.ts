@@ -389,29 +389,15 @@ export class Intents {
       return this.signer;
     }
 
-    if (this.wibe3.wallets.length > 0) {
-      await openConnectPrimaryWallet(this.wibe3);
-      if (this.wibe3.priorityWallet == undefined) throw new Error("No signer attached");
-      this.signer = this.wibe3.priorityWallet;
-      return this.signer;
-    }
+    if (this.wibe3.wallets.length > 0) await openConnectPrimaryWallet(this.wibe3);
+    else await openConnector(this.wibe3);
 
-    await openConnector(this.wibe3);
-    if (this.wibe3.priorityWallet == undefined) await openConnectPrimaryWallet(this.wibe3);
     if (this.wibe3.priorityWallet == undefined) throw new Error("No signer attached");
     this.signer = this.wibe3.priorityWallet;
     return this.signer;
   }
 
-  async openSignFlow({
-    title,
-    allowedTokens,
-    onConfirm,
-  }: {
-    title?: string; //
-    allowedTokens?: string[];
-    onConfirm: (args: { depositQoute: BridgeReview | "direct"; processing?: () => Promise<BridgeReview> }) => Promise<void>;
-  }) {
+  async openSignFlow({ title, allowedTokens, onConfirm }: { title?: string; allowedTokens?: string[]; onConfirm: (args: { depositQoute?: BridgeReview; processing?: () => Promise<BridgeReview> }) => Promise<void> }) {
     if (!this.wibe3) throw "Attach wibe3";
     if (!this.signer) throw "Attach signer";
 
@@ -435,20 +421,20 @@ export class Intents {
   async depositAndExecute({ title = "Payment", message, allowedTokens, serverSideProcessing, payload }: { title?: string; message?: string; allowedTokens?: string[]; serverSideProcessing?: boolean; payload?: Record<string, any> } = {}) {
     await this.setupSigner();
     if (this.need.size === 0) return this.execute();
+
     await this.openSignFlow({
       title,
       allowedTokens,
-      onConfirm: async ({ depositQoute, processing }: { depositQoute: BridgeReview | "direct"; processing?: () => Promise<BridgeReview> }) => {
+      onConfirm: async ({ depositQoute, processing }: { depositQoute?: BridgeReview; processing?: () => Promise<BridgeReview> }) => {
         if (!serverSideProcessing) return;
 
-        if (depositQoute === "direct" || typeof depositQoute?.qoute !== "object" || !depositQoute.qoute?.depositAddress) {
-          await processing?.();
-          await this.execute();
-          return;
-        }
+        let depositAddress: string | undefined;
+        if (depositQoute?.qoute === "deposit") await processing?.();
+        else if (depositQoute?.qoute === "withdraw") await processing?.();
+        else depositAddress = depositQoute?.qoute?.depositAddress;
 
         await api.yieldIntentCall({
-          depositAddress: depositQoute.qoute.depositAddress,
+          depositAddress: depositAddress,
           commitment: this.commitments[0],
           payload: payload || {},
         });
