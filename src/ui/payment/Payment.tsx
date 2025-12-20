@@ -111,10 +111,9 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
 
   const confirmPaymentStep = async () => {
     try {
-      if (!flow?.review) throw new Error("Review not found");
       setFlow((t) => (t ? { ...t, step: "loading" } : null));
 
-      if (flow.review == null) {
+      if (flow?.review == null) {
         await intents.sign();
         return setFlow({ step: "success", loading: false });
       }
