@@ -48,6 +48,8 @@ export class HotConnector {
   public hotBridge: HotBridge;
   public exchange: Exchange;
 
+  readonly version = "1.0.58";
+
   private events = new EventEmitter<{
     connect: { wallet: OmniWallet };
     disconnect: { wallet: OmniWallet };

@@ -282,7 +282,10 @@ export class Exchange {
     if (request.from.chain !== Network.Hot && sender !== "qr") {
       const amount = BigInt(qoute.quote.amountIn);
       const depositAddress = qoute.quote.depositAddress!;
-      fee = await sender.transferFee(request.from, depositAddress, amount).catch(() => null);
+      fee = await sender.transferFee(request.from, depositAddress, amount).catch((e) => {
+        console.error("Failed to calculate transfer fee", e);
+        return null;
+      });
     }
 
     return {

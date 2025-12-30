@@ -68,7 +68,7 @@ class SolanaWallet extends OmniWallet {
     super.disconnect();
   }
 
-  async buildTranferInstructions(token: Token, amount: bigint, receiver: string, fee: ReviewFee) {
+  async buildTranferInstructions(token: Token, amount: bigint, receiver: string, fee?: ReviewFee) {
     const destination = new PublicKey(receiver);
     const owner = new PublicKey(this.address);
     const connection = this.getConnection();
@@ -81,10 +81,10 @@ class SolanaWallet extends OmniWallet {
         reserve,
         additionalFee,
         instructions: [
-          ComputeBudgetProgram.setComputeUnitPrice({ microLamports: Number(fee.priorityFee) }),
-          ComputeBudgetProgram.setComputeUnitLimit({ units: Number(fee.gasLimit) }),
+          fee ? ComputeBudgetProgram.setComputeUnitPrice({ microLamports: Number(fee.priorityFee) }) : undefined,
+          fee ? ComputeBudgetProgram.setComputeUnitLimit({ units: Number(fee.gasLimit) }) : undefined,
           SystemProgram.transfer({ fromPubkey: owner, toPubkey: destination, lamports: amount }),
-        ],
+        ].filter(Boolean) as TransactionInstruction[],
       };
     }
 
@@ -95,7 +95,11 @@ class SolanaWallet extends OmniWallet {
     const tokenFrom = getAssociatedTokenAddressSync(mint, owner, false, tokenProgramId);
     const tokenTo = getAssociatedTokenAddressSync(mint, destination, false, tokenProgramId);
 
-    const instructions: TransactionInstruction[] = [ComputeBudgetProgram.setComputeUnitPrice({ microLamports: Number(fee.baseFee) }), ComputeBudgetProgram.setComputeUnitLimit({ units: Number(fee.gasLimit) })];
+    const instructions: TransactionInstruction[] = [];
+    if (fee) {
+      instructions.push(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: Number(fee.baseFee) }));
+      instructions.push(ComputeBudgetProgram.setComputeUnitLimit({ units: Number(fee.gasLimit) }));
+    }
 
     const isRegistered = await getAccount(connection, tokenTo, "confirmed", tokenProgramId).catch(() => null);
     if (isRegistered == null) {
@@ -152,7 +156,7 @@ class SolanaWallet extends OmniWallet {
   }
 
   async getPriorityFeeEstimate(params: any): Promise<any> {
-    const response = await fetch(api.baseUrl + "/api/v1/wibe3/helius/staked", {
+    const response = await fetch("https://api0.herewallet.app/api/v1/evm/helius/staked", {
       body: JSON.stringify({ jsonrpc: "2.0", id: "helius-sdk", method: "getPriorityFeeEstimate", params: [params] }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
@@ -165,7 +169,7 @@ class SolanaWallet extends OmniWallet {
     return result;
   }
 
-  async transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee: ReviewFee }): Promise<string> {
+  async transfer(args: { token: Token; receiver: string; amount: bigint; comment?: string; gasFee?: ReviewFee }): Promise<string> {
     const { instructions } = await this.buildTranferInstructions(args.token, args.amount, args.receiver, args.gasFee);
     return await this.sendTransaction(instructions);
   }
