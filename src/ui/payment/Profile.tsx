@@ -2,7 +2,10 @@ import { observer } from "mobx-react-lite";
 import styled from "styled-components";
 import { useEffect } from "react";
 
+import PlusIcon from "../icons/plus";
 import { LogoutIcon } from "../icons/logout";
+import ExchangeIcon from "../icons/exchange";
+
 import { openBridge, openConnector } from "../router";
 import { HotConnector } from "../../HotConnector";
 import { formatter } from "../../core/utils";
@@ -11,7 +14,6 @@ import { tokens } from "../../core/tokens";
 import Popup from "../Popup";
 
 import { ImageView, TokenCard, TokenIcon } from "./TokenCard";
-import ExchangeIcon from "../icons/exchange";
 import { PopupOption } from "../styles";
 
 export const Loader = styled.div`
@@ -62,7 +64,11 @@ export const Profile = observer(({ hot, onClose }: { hot: HotConnector; onClose:
           />
         ),
       };
-    });
+    })
+    .filter((t) => t != null);
+
+  const omniTokens = tokensList.filter((t) => t.chain === -4);
+  const nonOmniTokens = tokensList.filter((t) => t.chain !== -4);
 
   useEffect(() => {
     if (hot.wallets.length > 0) return;
@@ -70,34 +76,43 @@ export const Profile = observer(({ hot, onClose }: { hot: HotConnector; onClose:
   }, [hot.wallets.length]);
 
   return (
-    <Popup onClose={onClose}>
+    <Popup onClose={onClose} style={{ gap: 16 }}>
       <div style={{ display: "flex", flexWrap: "wrap", width: "100%", gap: 8 }}>
         {hot.connectors.map((connector) =>
           connector.wallets.map((wallet) => (
             <WalletCard onClick={() => connector.disconnect()}>
               <ImageView src={wallet.icon} alt={connector.name} size={20} />
               <div>{formatter.truncateAddress(wallet.address, 8)}</div>
-              <LogoutIcon width={20} height={20} />
+              <LogoutIcon />
             </WalletCard>
           ))
         )}
 
         {hot.wallets.length < 6 && (
-          <WalletCard style={{ paddingLeft: 12, paddingRight: 12 }} onClick={() => openConnector(hot)}>
+          <WalletCard style={{ paddingRight: 12 }} onClick={() => openConnector(hot)}>
+            <PlusIcon />
             Add wallet
           </WalletCard>
         )}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", width: "100%", gap: 8, marginTop: 16 }}>
+      <Card>
+        <PSmall>YOUR BALANCE</PSmall>
         <BalanceCard>${formatter.amount(totalBalance)}</BalanceCard>
-        <ExchangeButton onClick={() => (onClose(), openBridge(hot, { title: "Exchange" }))}>
-          <ExchangeIcon size={32} strokeColor="#d2d2d2" />
-        </ExchangeButton>
-      </div>
+
+        <div style={{ width: "100%", display: "flex", gap: 12, marginTop: 8 }}>
+          <ActionButton onClick={() => (onClose(), openBridge(hot, { title: "Exchange" }))}>
+            <ExchangeIcon />
+            Exchange
+          </ActionButton>
+          <ActionButton disabled onClick={() => (onClose(), openBridge(hot, { title: "Deposit" }))}>
+            Deposit
+          </ActionButton>
+        </div>
+      </Card>
 
       {hot.activity.withdrawalsList.length > 0 && (
-        <TokenCards style={{ marginTop: 16 }}>
+        <TokenCards>
           <p style={{ fontSize: 16, fontWeight: 600, color: "#d2d2d2", textAlign: "left" }}>Pending withdrawals</p>
           {hot.activity.withdrawalsList.map((withdrawal) => {
             const token = tokens.get(withdrawal.token as OmniToken, withdrawal.chain);
@@ -121,37 +136,56 @@ export const Profile = observer(({ hot, onClose }: { hot: HotConnector; onClose:
         </TokenCards>
       )}
 
-      {tokensList.filter((t) => t != null && t.chain === -4).length > 0 && (
-        <TokenCards style={{ marginTop: 16 }}>
+      {omniTokens.length > 0 && (
+        <TokenCards>
           <p style={{ fontSize: 16, fontWeight: 600, color: "#d2d2d2", textAlign: "left" }}>Tokens to withdraw</p>
-          {tokensList.filter((t) => t != null && t.chain === -4).map((t) => t?.component)}
-          <div style={{ marginTop: 8, marginBottom: -4, width: "100%", height: 1, background: "#383d42" }}></div>
+          {omniTokens.map((t) => t.component)}
         </TokenCards>
       )}
 
-      {tokensList.filter((t) => t != null && t.chain !== -4).length > 0 && (
-        <TokenCards style={{ marginTop: 16 }}>
-          {/* Tokens to exchange */}
-          {tokensList.filter((t) => t != null && t.chain !== -4).map((t) => t?.component)}
+      {nonOmniTokens.length > 0 && (
+        <TokenCards>
+          <p style={{ fontSize: 16, fontWeight: 600, color: "#d2d2d2", textAlign: "left" }}>Portfolio</p>
+          {nonOmniTokens.map((t) => t.component)}
         </TokenCards>
       )}
     </Popup>
   );
 });
 
-const ExchangeButton = styled.button`
+const ActionButton = styled.button`
+  display: flex;
+  padding: 0 24px;
+  border-radius: 12px;
+  background: #e7e7e7;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+  height: 48px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  cursor: pointer;
-  outline: none;
-  border: none;
-  background: transparent;
-  padding: 8px;
-  border-radius: 24px;
-  transition: background 0.2s ease-in-out;
+  flex: 1;
+
+  color: #121212;
+  text-align: center;
+  font-family: "Golos Text";
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 22px;
+  letter-spacing: -0.16px;
+
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: #d2d2d2;
+  }
+
+  &:disabled {
+    background: #3e3e3e;
+    color: #828282;
+    cursor: not-allowed;
   }
 `;
 
@@ -170,7 +204,7 @@ const WalletCard = styled.div`
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 6px;
   padding-left: 8px;
-  padding-right: 12px;
+  padding-right: 8px;
   background: #1a1a1a;
   cursor: pointer;
   transition: background 0.2s ease-in-out;
@@ -181,7 +215,34 @@ const WalletCard = styled.div`
 `;
 
 const BalanceCard = styled.h2`
-  font-size: 48px;
-  font-weight: 600;
   color: #fff;
+  font-family: "Golos Text";
+  font-size: 32px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 44px;
+  text-align: left;
+  margin: 0;
+`;
+
+const PSmall = styled.p`
+  color: #bfbfbf;
+  font-family: "Golos Text";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.14px;
+  text-align: left;
+  margin: 0;
+`;
+
+const Card = styled.div`
+  display: flex;
+  padding: 12px;
+  flex-direction: column;
+  border-radius: 16px;
+  border: 1px solid #323232;
+  background: #272727;
+  width: 100%;
 `;

@@ -1,6 +1,6 @@
 import styled, { css } from "styled-components";
 
-const font = `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"`;
+const font = `Golos Text, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"`;
 
 export const ModalContainer = styled.div`
   position: fixed;
@@ -133,16 +133,6 @@ export const ModalBody = styled.div`
     transition: background 0.2s ease-in-out;
     font-family: monospace;
   }
-
-  p {
-    color: rgba(255, 255, 255, 0.9);
-    text-align: center;
-    font-size: 16px;
-    font-style: normal;
-    font-weight: 500;
-    line-height: normal;
-    letter-spacing: -0.8px;
-  }
 `;
 
 export const Footer = styled.div`
@@ -264,6 +254,7 @@ export const PopupButton = styled.button`
 `;
 
 export const PopupRoot = styled.div`
+  @import url("https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..900&display=swap");
   height: 100%;
   width: 100%;
 

@@ -42,15 +42,6 @@ class TokensStorage {
       price: 0,
     });
 
-    list.unshift({
-      blockchain: "adi" as any,
-      priceUpdatedAt: "2025-11-23T18:01:00.349Z",
-      assetId: OmniToken.ADI,
-      symbol: "ADI",
-      decimals: 18,
-      price: 0,
-    });
-
     runInAction(() => {
       this.list = list.flatMap((t) => {
         if (!chains.getByKey(t.blockchain)) return [];

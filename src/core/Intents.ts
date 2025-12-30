@@ -428,13 +428,11 @@ export class Intents {
       onConfirm: async ({ depositQoute, processing }: { depositQoute?: BridgeReview; processing?: () => Promise<BridgeReview> }) => {
         if (!serverSideProcessing) return;
 
-        console.log("Processing 1");
         let depositAddress: string | undefined;
         if (depositQoute?.qoute === "deposit") await processing?.();
         else if (depositQoute?.qoute === "withdraw") await processing?.();
         else depositAddress = depositQoute?.qoute?.depositAddress;
 
-        console.log("yieldIntentCall", depositAddress, this.commitments[0], payload);
         await api.yieldIntentCall({
           depositAddress: depositAddress,
           commitment: this.commitments[0],

@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { OmniWallet } from "../../OmniWallet";
 import Popup, { present } from "../Popup";
 import { PopupButton } from "../styles";
-import { chains } from "../../core";
 
 interface AuthIntentPopupProps {
   wallet: OmniWallet;

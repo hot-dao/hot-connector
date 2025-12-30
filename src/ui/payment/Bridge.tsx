@@ -440,7 +440,7 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess, onSele
 const TokenPreview = ({ style, token, onSelect }: { style?: React.CSSProperties; token: Token; onSelect: (token: Token) => void }) => {
   return (
     <SelectTokenButton style={style} onClick={() => onSelect(token)}>
-      <TokenIcon token={token} />
+      <TokenIcon withoutChain token={token} />
       <p style={{ fontSize: 24, fontWeight: "bold" }}>{token.symbol}</p>
       <ArrowRightIcon style={{ flexShrink: 0, position: "absolute", right: 4 }} />
     </SelectTokenButton>

@@ -16,9 +16,9 @@ import { ImageView } from "./TokenCard";
 
 interface SelectSenderProps {
   type: WalletType;
-  onSelect: (wallet?: OmniWallet | "qr") => void;
   hot: HotConnector;
   onClose: () => void;
+  onSelect: (wallet?: OmniWallet | "qr") => void;
 }
 
 export const SelectSender = observer(({ hot, type, onSelect, onClose }: SelectSenderProps) => {

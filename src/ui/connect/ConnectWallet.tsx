@@ -40,7 +40,7 @@ export const Connector = observer(({ hot, onClose, title, walletType, widget }: 
             <p>{t.name}</p>
             {t.wallets[0]?.address && <span className="wallet-address">{formatter.truncateAddress(t.wallets[0].address, 24)}</span>}
           </PopupOptionInfo>
-          {t.wallets[0]?.address && <LogoutIcon />}
+          {t.wallets[0]?.address && <LogoutIcon width={32} height={32} />}
         </PopupOption>
       ))}
 
@@ -59,7 +59,7 @@ export const Connector = observer(({ hot, onClose, title, walletType, widget }: 
                 <p>{t.name}</p>
                 {t.wallets[0]?.address && <span className="wallet-address">Multichain connected</span>}
               </PopupOptionInfo>
-              {t.wallets[0]?.address && <LogoutIcon />}
+              {t.wallets[0]?.address && <LogoutIcon width={32} height={32} />}
             </PopupOption>
           ))}
         </>

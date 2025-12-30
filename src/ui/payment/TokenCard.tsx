@@ -8,7 +8,6 @@ import { Token } from "../../core/token";
 
 import { HotConnector } from "../../HotConnector";
 import { OmniWallet } from "../../OmniWallet";
-import { PopupOption } from "../styles";
 
 const images = {
   cached: new Map<string, Promise<void>>(),
@@ -34,6 +33,7 @@ enum ImageState {
 
 export const ImageView = ({ src, size = 40, alt, style }: { src: string; size?: number; alt: string; style?: React.CSSProperties }) => {
   const [icon, setIcon] = useState<ImageState>(ImageState.Loading);
+
   useEffect(() => {
     setIcon(ImageState.Loading);
     images
@@ -53,11 +53,11 @@ export const ImageView = ({ src, size = 40, alt, style }: { src: string; size?: 
   );
 };
 
-export const TokenIcon = observer(({ token, wallet }: { token: Token; wallet?: OmniWallet }) => {
+export const TokenIcon = observer(({ token, wallet, withoutChain }: { token: Token; wallet?: OmniWallet; withoutChain?: boolean }) => {
   return (
-    <div style={{ position: "relative", width: 40, height: 40 }}>
+    <div style={{ position: "relative", width: 40, height: 40, flexShrink: 0 }}>
       <ImageView src={token.icon} alt={token.symbol} size={40} />
-      <ImageView src={token.chainIcon} alt={token.symbol} size={14} style={{ position: "absolute", bottom: 0, right: 0 }} />
+      {!withoutChain && <ImageView src={token.chainIcon} alt={token.symbol} size={14} style={{ position: "absolute", bottom: 0, right: 0 }} />}
       {token.chain === -4 && wallet?.type && <ImageView src={wallet.icon} alt={chains.getByType(wallet.type)?.[0]?.name || ""} size={14} style={{ position: "absolute", bottom: 0, left: 0 }} />}
     </div>
   );
@@ -69,29 +69,68 @@ export const TokenCard = observer(
     const symbol = token.chain === -4 && !token.isMainOmni ? `${token.symbol} (${token.originalChainSymbol})` : token.symbol;
 
     return (
-      <PopupOption key={token.id} onClick={() => onSelect?.(token, wallet)}>
+      <Card key={token.id} onClick={() => onSelect?.(token, wallet)}>
         <TokenIcon token={token} wallet={wallet} />
 
-        <TokenWrap style={{ marginTop: -2, textAlign: "left" }}>
-          <p style={{ textAlign: "left", fontSize: 20, fontWeight: "bold" }}>{symbol}</p>
-          <p style={{ textAlign: "left", fontSize: 14, color: "#c6c6c6" }}>${formatter.amount(token.usd)}</p>
+        <TokenWrap>
+          <Text style={{ textAlign: "left" }}>{symbol}</Text>
+          <PSmall style={{ textAlign: "left" }}>${formatter.amount(token.usd)}</PSmall>
         </TokenWrap>
 
         {rightControl || (
-          <TokenWrap style={{ paddingRight: 4, marginLeft: "auto", alignItems: "flex-end" }}>
-            <p style={{ textAlign: "right", fontSize: 20 }}>{token.readable(balance)}</p>
-            <p style={{ textAlign: "right", fontSize: 14, color: "#c6c6c6" }}>${token.readable(balance, token.usd)}</p>
+          <TokenWrap style={{ textAlign: "right", paddingRight: 4, marginLeft: "auto", alignItems: "flex-end" }}>
+            <Text>{token.readable(balance)}</Text>
+            <PSmall>${token.readable(balance, token.usd)}</PSmall>
           </TokenWrap>
         )}
-      </PopupOption>
+      </Card>
     );
   }
 );
 
+const Card = styled.div`
+  display: flex;
+  padding: 12px;
+  padding-bottom: 10px;
+  gap: 10px;
+  border-radius: 16px;
+  border: 1px solid #323232;
+  background: #272727;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+`;
+
+const PSmall = styled.p`
+  color: #bfbfbf;
+  font-family: "Golos Text";
+  font-size: 12px;
+  font-style: normal;
+  line-height: 16px;
+  letter-spacing: -0.12px;
+  text-align: left;
+  font-weight: bold;
+`;
+
+const Text = styled.p`
+  color: #fff;
+  text-align: right;
+  font-family: "Golos Text";
+  font-size: 16px;
+  font-style: normal;
+  line-height: 22px;
+  letter-spacing: -0.16px;
+  font-weight: bold;
+`;
+
 const TokenWrap = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  margin-top: -1px;
 
   &,
   p {
