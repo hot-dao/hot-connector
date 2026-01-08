@@ -176,6 +176,16 @@ export class Exchange {
     return BigInt(swap.amount_in);
   }
 
+  isDirectDeposit(from: Token, to: Token) {
+    const directChains = [Network.Near, Network.Juno, Network.Gonka, Network.ADI];
+    return directChains.includes(from.chain) && to.chain === Network.Hot && from.omniAddress === to.omniAddress;
+  }
+
+  isDirectWithdraw(from: Token, to: Token) {
+    const directChains = [Network.Near, Network.Juno, Network.Gonka, Network.ADI];
+    return directChains.includes(to.chain) && from.chain === Network.Hot && from.omniAddress === to.omniAddress;
+  }
+
   async reviewSwap(request: BridgeRequest): Promise<BridgeReview> {
     const { sender, refund, from, to, amount, recipient, slippage, type } = request;
     const intentFrom = await this.getToken(from.chain, from.address);
@@ -185,11 +195,10 @@ export class Exchange {
     if (!intentTo) throw new Error("Unsupported token");
 
     const deadlineTime = 5 * 60 * 1000;
-    const directChains = [Network.Near, Network.Juno, Network.Gonka, Network.ADI];
     const deadline = new Date(Date.now() + deadlineTime).toISOString();
     const noFee = from.symbol === to.symbol || (from.symbol.toLowerCase().includes("usd") && to.symbol.toLowerCase().includes("usd"));
 
-    if (sender !== "qr" && directChains.includes(from.chain) && to.chain === Network.Hot && from.omniAddress === to.omniAddress) {
+    if (sender !== "qr" && this.isDirectDeposit(from, to)) {
       const fee = await this.wibe3.hotBridge.getDepositFee({
         intentAccount: sender.omniAddress,
         sender: sender.address,
@@ -213,7 +222,7 @@ export class Exchange {
       };
     }
 
-    if (sender !== "qr" && directChains.includes(to.chain) && from.chain === Network.Hot && from.omniAddress === to.omniAddress) {
+    if (sender !== "qr" && this.isDirectWithdraw(from, to)) {
       const fee = await this.withdrawFee(request);
       if (fee >= amount) throw "Withdraw fee is greater than amount";
       return {
