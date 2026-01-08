@@ -1,4 +1,5 @@
 import React from "react";
+import { PSmall } from "./text";
 
 interface Step {
   label: string;
@@ -37,7 +38,7 @@ export const HorizontalStepper: React.FC<StepperProps> = ({ steps, currentStep, 
                   zIndex: 1,
                 }}
               >
-                <p style={{ fontSize: 16, color: "#fff", opacity: isActive ? 1 : 0.5, position: "absolute", top: 24, width: 100 }}>{step.label}</p>
+                <PSmall style={{ color: "#fff", opacity: isActive ? 1 : 0.5, position: "absolute", top: 24, width: 100 }}>{step.label}</PSmall>
               </div>
             </div>
 

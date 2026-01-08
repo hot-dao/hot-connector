@@ -62,3 +62,13 @@ export const H4 = styled.h4`
   font-weight: 600;
   margin: 0;
 `;
+
+export const H6 = styled.h6`
+  color: var(--text-text-primary, #fff);
+  font-family: var(--font-family-headings, "Golos Text");
+  font-size: var(--h6-font-size, 20px);
+  font-style: normal;
+  font-weight: 500;
+  line-height: var(--h6-line-height, 28px);
+  margin: 0;
+`;

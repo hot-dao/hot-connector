@@ -18,20 +18,21 @@ import Popup from "../Popup";
 
 import { Loader } from "../uikit/loader";
 import { HorizontalStepper } from "../uikit/Stepper";
+import { ActionButton } from "../uikit/button";
+import { H6, PSmall } from "../uikit/text";
 import { serializeError } from "../utils";
-import { ActionButton, Button } from "../uikit/button";
 
 interface PaymentProps {
-  intents: Intents;
-  title?: string;
+  onReject: (message: string) => void;
+  onConfirm: (args: { depositQoute?: BridgeReview; processing?: () => Promise<BridgeReview> }) => Promise<void>;
+  close: () => void;
   allowedTokens?: string[];
   prepaidAmount: bigint;
   payableToken: Token;
   needAmount: bigint;
   connector: HotConnector;
-  onReject: (message: string) => void;
-  onConfirm: (args: { depositQoute?: BridgeReview; processing?: () => Promise<BridgeReview> }) => Promise<void>;
-  close: () => void;
+  intents: Intents;
+  title?: string;
 }
 
 const animations = {
@@ -66,15 +67,18 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
   } | null>(needAmount === 0n ? { step: "transfer" } : null);
 
   const paymentTitle = title || `Pay ${payableToken.readable(needAmount)} ${payableToken.symbol}`;
+  const showPrepaidToken = payableToken.float(prepaidAmount) * payableToken.usd >= 0.01;
 
   const selectToken = async (from: Token, wallet?: OmniWallet) => {
     if (!wallet) return;
 
     try {
       setFlow({ token: from, wallet, review: undefined, step: "sign" });
+      const insurance = (needAmount * BigInt(Math.floor(PAY_SLIPPAGE * 1000))) / BigInt(1000);
+      const extra = connector.exchange.isDirectDeposit(from, payableToken) ? insurance : 0n;
       const review = await connector.exchange.reviewSwap({
         recipient: Recipient.fromWallet(intents.signer)!,
-        amount: needAmount + (needAmount * BigInt(Math.floor(PAY_SLIPPAGE * 1000))) / BigInt(1000),
+        amount: needAmount + extra,
         slippage: PAY_SLIPPAGE,
         sender: wallet,
         refund: wallet,
@@ -171,27 +175,35 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
       <Popup onClose={() => onReject("closed")} header={<p>{paymentTitle}</p>}>
         <HorizontalStepper style={{ marginBottom: 24 }} steps={[{ label: "Select" }, { label: "Review" }, { label: "Confirm" }]} currentStep={2} />
 
-        {prepaidAmount > 0n && <TokenCard token={payableToken} hot={connector} wallet={intents.signer} amount={prepaidAmount} />}
-        {prepaidAmount > 0n && flow.token != null && (
-          <PlusButton>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <rect x="11" y="4" width="2" height="16" rx="1" fill="var(--icon-primary)" />
-              <rect x="4" y="11" width="16" height="2" rx="1" fill="var(--icon-primary)" />
-            </svg>
-          </PlusButton>
-        )}
+        <div style={{ textAlign: "left" }}>
+          <H6>Confirm transfer</H6>
+          <PSmall>Transfer approved. Click confirm to make the payment.</PSmall>
+        </div>
 
-        {flow.token != null && (
-          <TokenCard //
-            hot={connector}
-            token={flow.token}
-            wallet={flow.wallet}
-            amount={flow.review == null ? needAmount : flow.review?.amountIn ?? 0n}
-          />
-        )}
+        <div style={{ marginTop: 8, position: "relative", width: "100%" }}>
+          {showPrepaidToken && <TokenCard token={payableToken} hot={connector} wallet={intents.signer} amount={prepaidAmount} />}
+
+          {flow.token != null && (
+            <TokenCard //
+              hot={connector}
+              token={flow.token}
+              wallet={flow.wallet}
+              amount={flow.review == null ? needAmount : flow.review?.amountIn ?? 0n}
+            />
+          )}
+
+          {showPrepaidToken && flow.token != null && (
+            <PlusButton>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect x="11" y="4" width="2" height="16" rx="1" fill="var(--icon-primary)" />
+                <rect x="4" y="11" width="16" height="2" rx="1" fill="var(--icon-primary)" />
+              </svg>
+            </PlusButton>
+          )}
+        </div>
 
         <ActionButton style={{ marginTop: 24 }} onClick={confirmPaymentStep}>
-          {flow?.loading ? "Confirming..." : "Confirm transaction"}
+          {flow?.loading ? "Transferring..." : "Confirm transfer"}
         </ActionButton>
       </Popup>
     );
@@ -202,27 +214,35 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
 
     return (
       <Popup onClose={() => onReject("closed")} header={<p>{title}</p>}>
-        <HorizontalStepper style={{ marginBottom: 12 }} steps={[{ label: "Select" }, { label: "Review" }, { label: "Confirm" }]} currentStep={1} />
+        <HorizontalStepper style={{ marginBottom: 24 }} steps={[{ label: "Select" }, { label: "Review" }, { label: "Confirm" }]} currentStep={1} />
 
-        {prepaidAmount > 0n && <TokenCard token={payableToken} hot={connector} wallet={intents.signer} amount={prepaidAmount} />}
-        {prepaidAmount > 0n && flow.token != null && (
-          <PlusButton>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <rect x="11" y="4" width="2" height="16" rx="1" fill="var(--icon-primary)" />
-              <rect x="4" y="11" width="16" height="2" rx="1" fill="var(--icon-primary)" />
-            </svg>
-          </PlusButton>
-        )}
+        <div style={{ textAlign: "left" }}>
+          <H6>Approve transfer</H6>
+          <PSmall>Click the button below to approve the transfer</PSmall>
+        </div>
 
-        {flow.token != null && (
-          <TokenCard //
-            hot={connector}
-            token={flow.token}
-            wallet={flow.wallet}
-            rightControl={flow.review ? undefined : rightControl}
-            amount={flow.review == null ? needAmount : flow.review?.amountIn ?? 0n}
-          />
-        )}
+        <div style={{ marginTop: 8, position: "relative", width: "100%" }}>
+          {showPrepaidToken && <TokenCard token={payableToken} hot={connector} wallet={intents.signer} amount={prepaidAmount} />}
+
+          {flow.token != null && (
+            <TokenCard //
+              hot={connector}
+              token={flow.token}
+              wallet={flow.wallet}
+              rightControl={flow.review ? undefined : rightControl}
+              amount={flow.review == null ? needAmount : flow.review?.amountIn ?? 0n}
+            />
+          )}
+
+          {showPrepaidToken && flow.token != null && (
+            <PlusButton>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect x="11" y="4" width="2" height="16" rx="1" fill="var(--icon-primary)" />
+                <rect x="4" y="11" width="16" height="2" rx="1" fill="var(--icon-primary)" />
+              </svg>
+            </PlusButton>
+          )}
+        </div>
 
         {flow.error ? (
           <ActionButton style={{ marginTop: 24 }} onClick={() => setFlow(null)}>
@@ -230,7 +250,7 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
           </ActionButton>
         ) : (
           <ActionButton style={{ marginTop: 24 }} disabled={!flow?.review} onClick={signStep}>
-            {flow?.loading ? "Signing..." : flow?.review ? "Sign review" : "Quoting..."}
+            {flow?.loading ? "Approving..." : flow?.review ? "Approve transfer" : "Quoting..."}
           </ActionButton>
         )}
       </Popup>
@@ -258,7 +278,7 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
 
   return (
     <Popup onClose={() => onReject("closed")} header={<p>{title}</p>}>
-      <HorizontalStepper style={{ marginBottom: 12 }} steps={[{ label: "Select" }, { label: "Review" }, { label: "Confirm" }]} currentStep={0} />
+      <HorizontalStepper style={{ marginBottom: 24 }} steps={[{ label: "Select" }, { label: "Review" }, { label: "Confirm" }]} currentStep={0} />
 
       {recommendedTokens.map(({ token, wallet, balance }) => renderToken(token, wallet, balance))}
       {otherTokens.map(({ token, wallet, balance }) => renderToken(token, wallet, balance))}
@@ -288,12 +308,12 @@ const ErrorIcon = () => {
 const PlusButton = styled.button`
   position: absolute;
   left: 50%;
-  top: 209px;
+  top: 50%;
   transform: translate(-50%, 0);
 
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
 
   display: flex;
   align-items: center;
