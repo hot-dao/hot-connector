@@ -1,12 +1,12 @@
-import { NearWalletBase, SignMessageParams, SignedMessage, SignAndSendTransactionParams } from "@hot-labs/near-connect";
+import { NearWalletBase, SignMessageParams, SignedMessage, SignAndSendTransactionParams, SignAndSendTransactionsParams } from "@hot-labs/near-connect";
 import { base64, base58 } from "@scure/base";
 
 import { OmniWallet } from "../OmniWallet";
 import { WalletType } from "../core/chains";
 import { ReviewFee } from "../core/bridge";
-import { rpc, TGAS } from "./rpc";
 import { Token } from "../core/token";
 import { Commitment } from "../core";
+import { rpc, TGAS } from "./rpc";
 
 export default class NearWallet extends OmniWallet {
   readonly icon = "https://storage.herewallet.app/upload/73a44e583769f11112b0eff1f2dd2a560c05eed5f6d92f0c03484fa047c31668.png";
@@ -29,6 +29,12 @@ export default class NearWallet extends OmniWallet {
     );
 
     return Object.fromEntries(balances);
+  }
+
+  async sendTransactions(params: SignAndSendTransactionsParams): Promise<string[]> {
+    if (!this.wallet) throw "not impl";
+    const result = await this.wallet.signAndSendTransactions(params);
+    return result.map((tx) => tx.transaction.hash);
   }
 
   async sendTransaction(params: SignAndSendTransactionParams): Promise<string> {
@@ -196,13 +202,13 @@ export default class NearWallet extends OmniWallet {
     throw new Error("Failed to register intent account");
   }
 
-  async signIntents(intents: Record<string, any>[], options?: { nonce?: Uint8Array; deadline?: number }): Promise<Commitment> {
+  async signIntents(intents: Record<string, any>[], options?: { nonce?: Uint8Array; deadline?: number; signerId?: string }): Promise<Commitment> {
     if (!this.wallet) throw "not impl";
 
     const nonce = new Uint8Array(options?.nonce || window.crypto.getRandomValues(new Uint8Array(32)));
     const message = JSON.stringify({
       deadline: options?.deadline ? new Date(options.deadline).toISOString() : "2100-01-01T00:00:00.000Z",
-      signer_id: this.omniAddress,
+      signer_id: options?.signerId || this.omniAddress,
       intents: intents,
     });
 

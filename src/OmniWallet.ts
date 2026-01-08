@@ -45,15 +45,17 @@ export abstract class OmniWallet {
   abstract fetchBalance(chain: number, address: string): Promise<bigint>;
   abstract fetchBalances(chain?: number, whitelist?: string[]): Promise<Record<string, bigint>>;
 
-  abstract signIntents(intents: Record<string, any>[], options?: { nonce?: Uint8Array; deadline?: number }): Promise<Commitment>;
+  abstract signIntents(intents: Record<string, any>[], options?: { nonce?: Uint8Array; deadline?: number; signerId?: string }): Promise<Commitment>;
 
-  async auth(intents?: Record<string, any>[]): Promise<string> {
+  async auth<T = string>(intents?: Record<string, any>[], options?: { domain?: string; signerId?: string; customAuth?: (commitment: Commitment, seed: string) => Promise<T> }): Promise<T> {
     return openAuthPopup(this, async () => {
       const seed = hex.encode(new Uint8Array(window.crypto.getRandomValues(new Uint8Array(32))));
-      const msgBuffer = new TextEncoder().encode(`${window.location.origin}_${seed}`);
+      const msgBuffer = new TextEncoder().encode(`${options?.domain || window.location.origin}_${seed}`);
       const nonce = await window.crypto.subtle.digest("SHA-256", new Uint8Array(msgBuffer));
-      const signed = await this.signIntents(intents || [], { nonce: new Uint8Array(nonce) });
-      return await api.auth(signed, seed);
+      const signed = await this.signIntents(intents || [], { nonce: new Uint8Array(nonce), signerId: options?.signerId || this.omniAddress });
+
+      if (options?.customAuth) return await options.customAuth(signed, seed);
+      return (await api.auth(signed, seed)) as T;
     });
   }
 
