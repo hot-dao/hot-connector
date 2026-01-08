@@ -168,17 +168,19 @@ export default class NearWallet extends OmniWallet {
     return await this.sendTransaction({ receiverId: args.token.address, actions });
   }
 
-  async isIntentAccountRegistered() {
+  async isIntentAccountRegistered(publicKey: string) {
     const keys = await rpc.viewMethod({
       contractId: "intents.near",
       methodName: "public_keys_of",
       args: { account_id: this.address },
     });
-    return keys.includes(this.publicKey);
+
+    const list = keys.map((t: string) => t.split(":")[1].toLowerCase());
+    return list.includes(publicKey.split(":")[1].toLowerCase());
   }
 
-  async registerIntentAccountIfNeeded() {
-    let isRegistered = await this.isIntentAccountRegistered();
+  async registerIntentAccountIfNeeded(publicKey: string) {
+    let isRegistered = await this.isIntentAccountRegistered(publicKey);
     if (isRegistered) return;
 
     await this.sendTransaction({
@@ -188,7 +190,7 @@ export default class NearWallet extends OmniWallet {
           type: "FunctionCall",
           params: {
             methodName: "add_public_key",
-            args: { public_key: this.publicKey },
+            args: { public_key: publicKey },
             gas: String(80n * TGAS),
             deposit: String(1n),
           },
@@ -196,7 +198,7 @@ export default class NearWallet extends OmniWallet {
       ],
     }).catch(() => null);
 
-    isRegistered = await this.isIntentAccountRegistered();
+    isRegistered = await this.isIntentAccountRegistered(publicKey);
     if (isRegistered) return;
 
     throw new Error("Failed to register intent account");
@@ -216,7 +218,7 @@ export default class NearWallet extends OmniWallet {
     if (!result) throw new Error("Failed to sign message");
     const { signature, publicKey } = result;
 
-    await this.registerIntentAccountIfNeeded();
+    await this.registerIntentAccountIfNeeded(publicKey);
 
     return {
       standard: "nep413",
