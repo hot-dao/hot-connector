@@ -2,8 +2,8 @@ import { StargateClient } from "@cosmjs/stargate";
 import { OmniWallet } from "../OmniWallet";
 import { chains, WalletType } from "../core/chains";
 import { ReviewFee } from "../core/bridge";
-import CosmosConnector from "./connector";
 import { Commitment } from "../core";
+import { OmniConnector } from "../OmniConnector";
 
 interface ProtocolWallet {
   disconnect?: () => Promise<void>;
@@ -15,7 +15,7 @@ interface ProtocolWallet {
 export default class CosmosWallet extends OmniWallet {
   readonly type = WalletType.COSMOS;
 
-  constructor(readonly connector: CosmosConnector, readonly wallet: ProtocolWallet) {
+  constructor(readonly connector: OmniConnector, readonly wallet: ProtocolWallet) {
     super(connector);
   }
 
@@ -29,11 +29,6 @@ export default class CosmosWallet extends OmniWallet {
 
   get omniAddress() {
     return "";
-  }
-
-  async disconnect() {
-    super.disconnect();
-    this.wallet.disconnect?.();
   }
 
   sendTransaction(signDoc: any): Promise<string> {

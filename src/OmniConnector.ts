@@ -18,6 +18,7 @@ export interface OmniConnectorOption {
   name: string;
   icon: string;
   id: string;
+  deeplink?: string;
   download?: string;
   type: "extension" | "external";
 }
