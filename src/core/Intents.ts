@@ -443,6 +443,11 @@ export class Intents {
 
     if (serverSideProcessing) return;
     const close = openToast(message || "Executing payment");
+
+    const payableToken = tokens.get(Array.from(this.need.keys())[0]);
+    const payableAmount = this.need.get(payableToken.omniAddress as OmniToken) || 0n;
+    await this.signer?.waitUntilBalance({ [payableToken.omniAddress]: payableAmount });
+
     await this.execute().finally(() => close());
   }
 

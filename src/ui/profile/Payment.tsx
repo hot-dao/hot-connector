@@ -180,7 +180,7 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
           <PSmall>Transfer approved. Click confirm to make the payment.</PSmall>
         </div>
 
-        <div style={{ marginTop: 8, position: "relative", width: "100%" }}>
+        <div style={{ marginTop: 8, position: "relative", width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
           {showPrepaidToken && <TokenCard token={payableToken} hot={connector} wallet={intents.signer} amount={prepaidAmount} />}
 
           {flow.token != null && (
@@ -195,8 +195,8 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
           {showPrepaidToken && flow.token != null && (
             <PlusButton>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <rect x="11" y="4" width="2" height="16" rx="1" fill="var(--icon-primary)" />
-                <rect x="4" y="11" width="16" height="2" rx="1" fill="var(--icon-primary)" />
+                <rect x="11" y="4" width="2" height="16" rx="1" fill="#fff" />
+                <rect x="4" y="11" width="16" height="2" rx="1" fill="#fff" />
               </svg>
             </PlusButton>
           )}
@@ -221,7 +221,7 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
           <PSmall>Click the button below to approve the transfer</PSmall>
         </div>
 
-        <div style={{ marginTop: 8, position: "relative", width: "100%" }}>
+        <div style={{ marginTop: 8, position: "relative", width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
           {showPrepaidToken && <TokenCard token={payableToken} hot={connector} wallet={intents.signer} amount={prepaidAmount} />}
 
           {flow.token != null && (
@@ -237,8 +237,8 @@ export const Payment = observer(({ connector, intents, title = "Payment", allowe
           {showPrepaidToken && flow.token != null && (
             <PlusButton>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <rect x="11" y="4" width="2" height="16" rx="1" fill="var(--icon-primary)" />
-                <rect x="4" y="11" width="16" height="2" rx="1" fill="var(--icon-primary)" />
+                <rect x="11" y="4" width="2" height="16" rx="1" fill="#fff" />
+                <rect x="4" y="11" width="16" height="2" rx="1" fill="#fff" />
               </svg>
             </PlusButton>
           )}
@@ -309,7 +309,8 @@ const PlusButton = styled.button`
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, 0);
+  margin-top: -14px;
+  margin-left: -16px;
 
   border-radius: 50%;
   width: 30px;
@@ -326,4 +327,8 @@ const PlusButton = styled.button`
   border-radius: 24px;
   border: 4px solid #191919;
   background: #292929;
+
+  svg {
+    position: absolute;
+  }
 `;

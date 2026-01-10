@@ -59,7 +59,7 @@ export abstract class OmniWallet {
     });
   }
 
-  async waitUntilBalance(need: Record<string, bigint>, receiver: string, attempts = 0) {
+  async waitUntilBalance(need: Record<string, bigint>, receiver = this.omniAddress, attempts = 0) {
     if (attempts > 120) throw "Balance is not enough";
     const assets = Object.keys(need) as string[];
     const balances = await Intents.getIntentsBalances(assets, receiver);

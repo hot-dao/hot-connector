@@ -1,8 +1,8 @@
 import { Keplr } from "@keplr-wallet/provider-extension";
 import { TxRaw } from "@keplr-wallet/proto-types/cosmos/tx/v1beta1/tx";
 import { StargateClient } from "@cosmjs/stargate";
+import { base64, hex } from "@scure/base";
 import { runInAction } from "mobx";
-import { hex } from "@scure/base";
 
 import { api } from "../core/api";
 import { chains, WalletType } from "../core/chains";
@@ -21,6 +21,14 @@ declare global {
 }
 
 const wallets: Record<string, OmniConnectorOption> = {
+  gonkaWallet: {
+    name: "Gonka Wallet",
+    icon: "https://gonka-wallet.startonus.com/images/logo.png",
+    download: "https://t.me/gonka_wallet",
+    deeplink: "https://wallet.gonka.top/wc?wc=",
+    type: "external",
+    id: "gonkaWallet",
+  },
   keplr: {
     name: "Keplr Wallet",
     icon: "https://cdn.prod.website-files.com/667dc891bc7b863b5397495b/68a4ca95f93a9ab64dc67ab4_keplr-symbol.svg",
@@ -36,14 +44,6 @@ const wallets: Record<string, OmniConnectorOption> = {
     deeplink: "leapcosmos://wcV2?",
     type: "extension",
     id: "leap",
-  },
-  gonkaWallet: {
-    name: "Gonka Wallet",
-    icon: "https://gonka-wallet.startonus.com/images/logo.png",
-    download: "https://t.me/gonka_wallet",
-    deeplink: "https://gonka-wallet.startonus.com/wc?wc=",
-    type: "external",
-    id: "gonkaWallet",
   },
 };
 
@@ -110,11 +110,19 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
     if (!wc) throw new Error("WalletConnect not found");
 
     const properties = JSON.parse(wc.session?.sessionProperties?.keys || "{}");
-    const account = properties?.find((t: any) => t.chainId === "gonka-mainnet");
-    if (!account) throw new Error("Account not found");
+    const account = properties?.find?.((t: any) => t.chainId === "gonka-mainnet");
+    let publicKey = "";
+    let address = "";
 
-    const publicKey = Buffer.from(account.pubKey, "base64").toString("hex");
-    const address = account.bech32Address;
+    if (account) {
+      publicKey = Buffer.from(account.pubKey, "base64").toString("hex");
+      address = account.bech32Address || "";
+    } else {
+      const data = await wc.request({ method: "cosmos_getAccounts", params: { chainId: "gonka-mainnet" } });
+      if (!Array.isArray(data) || data.length === 0) throw new Error("Account not found");
+      publicKey = hex.encode(base64.decode(data[0].pubkey));
+      address = data[0].address;
+    }
 
     this.setStorage({ type: "walletconnect", id });
     const wallet = new CosmosWallet({
@@ -141,15 +149,15 @@ export default class CosmosConnector extends OmniConnector<CosmosWallet> {
           },
         });
 
-        const chain = chains.getByKey(signDoc.chainId);
-        if (!chain) throw new Error("Chain not found");
-
-        const client = await this.getClient(chain.key);
         const protobufTx = TxRaw.encode({
-          bodyBytes: signed.bodyBytes,
-          authInfoBytes: signed.authInfoBytes,
+          bodyBytes: signDoc.bodyBytes,
+          authInfoBytes: signDoc.authInfoBytes,
           signatures: [Buffer.from(signature.signature, "base64")],
         }).finish();
+
+        const chain = chains.getByKey(signDoc.chainId);
+        if (!chain) throw new Error("Chain not found");
+        const client = await this.getClient(chain.key);
 
         const result = await client.broadcastTx(protobufTx);
         if (result.code !== 0) throw "Transaction failed";

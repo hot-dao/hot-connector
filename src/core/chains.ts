@@ -113,18 +113,6 @@ const rpc = (chain: number) => `https://api0.herewallet.app/api/v1/evm/rpc/${cha
 const logo = (chain: number) => `https://storage.herewallet.app/ft/${chain}:native.png`;
 
 const chainsRepository: Record<number, ChainConfig> = {
-  [Network.Juno]: {
-    id: Network.Juno,
-    key: "juno-1",
-    name: "Juno",
-    bridgeContract: "juno1va9q7gma6l62aqq988gghv4r7u4hnlgm85ssmsdf9ypw77qfwa0qaz7ea4",
-    logo: "https://storage.herewallet.app/ft/4444118:ujuno.png",
-    currency: { id: "ujuno", symbol: "JUNO", decimals: 6, logo: logo(Network.Juno) },
-    rpc: rpc(Network.Juno),
-    prefix: "juno",
-    type: WalletType.COSMOS,
-    gasLimit: 200000n,
-  },
   [Network.Gonka]: {
     id: Network.Gonka,
     key: "gonka-mainnet",
