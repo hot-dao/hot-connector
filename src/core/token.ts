@@ -68,6 +68,10 @@ export class Token {
     return `${this.chain}:${this.address}`;
   }
 
+  get originalId() {
+    return `${this.originalChain}:${this.originalAddress}`;
+  }
+
   get isMainOmni() {
     if (this.chain !== Network.Hot) return false;
     return Object.values(OmniToken).some((token) => this.address === token);
@@ -90,7 +94,7 @@ export class Token {
     if (this.chain === Network.Ton) return 0.01;
     if (this.chain === Network.Stellar) return 0;
     if (this.chain === Network.Solana) return 0.001;
-    if (this.chain === Network.Near) return 0.01;
+    if (this.chain === Network.Near) return 0.1;
     if (this.usd === 0) return 0;
 
     if (this.chain === Network.Eth) return 2 / this.usd;
