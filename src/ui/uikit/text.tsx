@@ -18,6 +18,7 @@ export const PMedium = styled.p`
   line-height: var(--P-Default-line-height, 22px); /* 137.5% */
   letter-spacing: -0.16px;
   font-style: normal;
+  font-weight: 500;
   margin: 0;
 `;
 

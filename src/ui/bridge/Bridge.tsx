@@ -431,12 +431,7 @@ export const Bridge = observer(({ hot, widget, setup, onClose, onProcess, onSele
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <PSmall>Recipient:</PSmall>
-              <BadgeButton
-                onClick={() => {
-                  if (to.type === WalletType.OMNI) openSelectRecipient({ hot, type: to.type, onSelect: (recipient) => setRecipient(recipient) });
-                  else openWalletPicker(hot.getWalletConnector(to.type)!, (wallet) => setRecipient(Recipient.fromWallet(wallet)));
-                }}
-              >
+              <BadgeButton onClick={() => openSelectRecipient({ hot, type: to.type, onSelect: (recipient) => setRecipient(recipient) })}>
                 <PSmall>{recipient == null ? "Select" : formatter.truncateAddress(recipient.address, 8)}</PSmall>
               </BadgeButton>
             </div>

@@ -14,6 +14,7 @@ import Popup from "../Popup";
 import { Recipient } from "../../core/recipient";
 import { WalletType } from "../../core/chains";
 import { formatter } from "../../core/utils";
+import { PSmall } from "../uikit/text";
 
 interface SelectRecipientProps {
   recipient?: Recipient;
@@ -41,9 +42,26 @@ export const SelectRecipient = observer(({ recipient, hot, type, onSelect, onClo
 
   return (
     <Popup header={<p>Select recipient</p>} onClose={onClose}>
+      {connectors.map((t) => (
+        <PopupOption key={t.id} onClick={() => selectWallet(t)}>
+          <ImageView src={t.icon} alt={t.name} size={44} />
+          <PopupOptionInfo>
+            <p style={{ fontSize: 20, fontWeight: "bold" }}>{t.name}</p>
+            {t.wallets[0]?.address && <span className="wallet-address">{formatter.truncateAddress(t.wallets[0].address)}</span>}
+          </PopupOptionInfo>
+          {!t.wallets[0]?.address ? <p>Connect</p> : <ArrowRightIcon style={{ flexShrink: 0 }} />}
+        </PopupOption>
+      ))}
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", margin: "12px 0" }}>
+        <div style={{ width: "100%", height: 1, background: "rgba(255,255,255,0.1)" }}></div>
+        <PSmall>OR</PSmall>
+        <div style={{ width: "100%", height: 1, background: "rgba(255,255,255,0.1)" }}></div>
+      </div>
+
       {type !== WalletType.OMNI && (
-        <div style={{ width: "100%", marginBottom: 24 }}>
-          <p style={{ fontSize: 16, textAlign: "left" }}>Enter recipient address, avoid CEX</p>
+        <div style={{ width: "100%" }}>
+          <PSmall style={{ textAlign: "left" }}>Enter recipient address, avoid CEX</PSmall>
           <CustomRecipient>
             <input //
               type="text"
@@ -57,17 +75,6 @@ export const SelectRecipient = observer(({ recipient, hot, type, onSelect, onClo
           </CustomRecipient>
         </div>
       )}
-
-      {connectors.map((t) => (
-        <PopupOption key={t.id} onClick={() => selectWallet(t)}>
-          <ImageView src={t.icon} alt={t.name} size={44} />
-          <PopupOptionInfo>
-            <p style={{ fontSize: 20, fontWeight: "bold" }}>{t.name}</p>
-            {t.wallets[0]?.address && <span className="wallet-address">{formatter.truncateAddress(t.wallets[0].address)}</span>}
-          </PopupOptionInfo>
-          {!t.wallets[0]?.address ? <p>Connect</p> : <ArrowRightIcon style={{ flexShrink: 0 }} />}
-        </PopupOption>
-      ))}
     </Popup>
   );
 });

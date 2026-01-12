@@ -1,5 +1,7 @@
 import { computed, makeObservable, observable, runInAction } from "mobx";
 
+import packageJson from "../package.json";
+
 import { ChainConfig, chains, Network, WalletType } from "./core/chains";
 import { createHotBridge, HotBridge } from "./core/bridge";
 import { EventEmitter } from "./core/events";
@@ -50,6 +52,8 @@ export class HotConnector {
   public activity: Activity;
   public hotBridge: HotBridge;
   public exchange: Exchange;
+
+  public version = packageJson.version;
 
   private events = new EventEmitter<{
     connect: { wallet: OmniWallet; connector: OmniConnector };
