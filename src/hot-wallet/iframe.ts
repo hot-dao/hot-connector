@@ -81,7 +81,7 @@ const createIframe = (widget: string) => {
 
 class HOT {
   walletId = "https://t.me/herewalletbot/app";
-  ancestorOrigins = ["http://localhost:1234", "https://my.herewallet.app", "https://tgapp-dev.herewallet.app", "https://tgapp.herewallet.app", "https://beta.herewallet.app"];
+  ancestorOrigins = ["http://localhost:1234", "https://my.herewallet.app", "https://tgapp-dev.herewallet.app", "https://app.hot-labs.org", "https://tgapp.herewallet.app", "https://beta.herewallet.app"];
 
   get isInjected() {
     if (typeof window === "undefined") return false;
