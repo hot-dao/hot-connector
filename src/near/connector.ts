@@ -26,6 +26,12 @@ class Connector extends OmniConnector<NearWallet> {
     }
 
     this.connector.on("wallet:signOut", () => this.removeWallet());
+    this.connector.on("wallet:signIn", async ({ wallet, accounts }) => {
+      if (accounts.length === 0) return;
+      const { accountId, publicKey } = accounts[0];
+      this.setWallet(new NearWallet(accountId, publicKey, wallet));
+    });
+
     this.connector.getConnectedWallet().then(async ({ wallet }) => {
       const [account] = await wallet.getAccounts();
       if (account) this.setWallet(new NearWallet(account.accountId, account.publicKey, wallet));

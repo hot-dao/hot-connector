@@ -1,6 +1,7 @@
 import type { TonConnectorOptions } from "./connector";
 import TonConnector from "./connector";
 import TonWallet from "./wallet";
+import "./injected";
 
 import { HotConnector } from "../HotConnector";
 

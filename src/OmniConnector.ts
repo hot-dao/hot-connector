@@ -29,7 +29,6 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O = {}> {
   wallets: T[] = [];
   options: (O & OmniConnectorOption)[] = [];
 
-  private storage = new LocalStorage();
   protected events = new EventEmitter<{
     connect: { wallet: T; connector: OmniConnector<T, O> };
     disconnect: { wallet: T; connector: OmniConnector<T, O> };
@@ -42,6 +41,10 @@ export abstract class OmniConnector<T extends OmniWallet = OmniWallet, O = {}> {
       wallets: observable,
       options: observable,
     });
+  }
+
+  get storage() {
+    return this.wibe3.storage;
   }
 
   async initWalletConnect() {

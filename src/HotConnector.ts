@@ -7,7 +7,6 @@ import { createHotBridge, HotBridge } from "./core/bridge";
 import { EventEmitter } from "./core/events";
 import { Recipient } from "./core/recipient";
 import { OmniToken } from "./core/chains";
-import { formatter } from "./core/utils";
 import { Intents } from "./core/Intents";
 import { tokens } from "./core/tokens";
 import { Telemetry } from "./core/telemetry";
@@ -28,9 +27,11 @@ import { ConnectorType, OmniConnector } from "./OmniConnector";
 import { OmniWallet } from "./OmniWallet";
 import { Exchange } from "./exchange";
 import { Activity } from "./activity";
+import { DataStorage, LocalStorage } from "./storage";
 
 interface HotConnectorOptions {
   apiKey: string;
+  storage?: DataStorage;
   chains?: Record<number, ChainConfig>;
   connectors?: ((wibe3: HotConnector) => Promise<OmniConnector>)[];
   walletConnect?: {
@@ -45,6 +46,7 @@ interface HotConnectorOptions {
 }
 
 export class HotConnector {
+  public storage: DataStorage;
   public connectors: OmniConnector[] = [];
   public balances: Record<string, Record<string, bigint>> = {};
   public telemetry: Telemetry;
@@ -89,6 +91,7 @@ export class HotConnector {
     this.settings.metadata = options?.walletConnect?.metadata ?? undefined;
     Object.values(options?.chains ?? {}).forEach((chain) => chains.register(chain));
 
+    this.storage = options?.storage ?? new LocalStorage();
     this.telemetry = new Telemetry(this);
     this.hotBridge = createHotBridge();
     this.exchange = new Exchange(this);
