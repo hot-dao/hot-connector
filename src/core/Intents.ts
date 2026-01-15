@@ -5,21 +5,20 @@ import type { OmniWallet } from "../OmniWallet";
 import { rpc } from "../near/rpc";
 
 import type { Intent, Commitment, TokenDiffIntent, MtWithdrawIntent, FtWithdrawIntent, NftWithdrawIntent, TransferIntent } from "./types";
+import type { BridgeReview } from "../exchange";
+
 import { OmniToken } from "./chains";
 import { formatter } from "./utils";
 import { tokens } from "./tokens";
 import { api } from "./api";
-
-import { openConnector, openConnectPrimaryWallet, openPayment, openToast } from "../ui/router";
-import { BridgeReview } from "../exchange";
 
 export const TGAS = 1000000000000n;
 
 export class Intents {
   constructor(readonly wibe3?: HotConnector) {}
 
-  static get builder() {
-    return new Intents();
+  static builder(signer?: OmniWallet) {
+    return new Intents().attachWallet(signer);
   }
 
   signedHashes: string[] = [];
@@ -62,6 +61,7 @@ export class Intents {
    * Use this method to pay for a merchant's item created in pay.hot-labs.org
    */
   merchantPayment({ merchantId, token, itemId, email, amount, memo }: { token: OmniToken; merchantId: string; itemId: string; amount: number | bigint; memo: string; email: string }) {
+    if (typeof window === "undefined") throw "Merchant payment is only available in browser";
     return this.transfer({
       msg: JSON.stringify({ merchant_id: merchantId, item_id: itemId, memo: memo }),
       recipient: "pay.fi.tg",
@@ -381,6 +381,7 @@ export class Intents {
   }
 
   async setupSigner() {
+    if (typeof window === "undefined") throw "Setup signer is only available in browser";
     if (!this.wibe3) throw new Error("No wibe3 attached");
     if (this.signer) return this.signer;
 
@@ -389,6 +390,7 @@ export class Intents {
       return this.signer;
     }
 
+    const { openConnectPrimaryWallet, openConnector } = await import("../ui/router");
     if (this.wibe3.wallets.length > 0) await openConnectPrimaryWallet(this.wibe3);
     else await openConnector(this.wibe3);
 
@@ -408,6 +410,7 @@ export class Intents {
     excludedTokens?: string[];
     onConfirm: (args: { depositQoute?: BridgeReview; processing?: () => Promise<BridgeReview> }) => Promise<void>;
   }) {
+    if (typeof window === "undefined") throw "Open sign flow is only available in browser";
     if (!this.wibe3) throw "Attach wibe3";
     if (!this.signer) throw "Attach signer";
 
@@ -417,6 +420,7 @@ export class Intents {
     const balance = await this.wibe3.fetchToken(payableToken!, this.signer);
     const prepaidAmount = formatter.bigIntMin(payableAmount, balance);
 
+    const { openPayment } = await import("../ui/router");
     return await openPayment(this.wibe3, {
       onConfirm,
       needAmount: payableAmount - prepaidAmount,
@@ -444,6 +448,8 @@ export class Intents {
     serverSideProcessing?: boolean;
     payload?: Record<string, any>;
   } = {}) {
+    if (typeof window === "undefined") throw "Deposit and execute is only available in browser";
+
     await this.setupSigner();
     if (this.need.size === 0) return this.execute();
 
@@ -468,6 +474,7 @@ export class Intents {
     });
 
     if (serverSideProcessing) return;
+    const { openToast } = await import("../ui/router");
     const close = openToast(message || "Executing payment");
 
     const payableToken = tokens.get(Array.from(this.need.keys())[0]);

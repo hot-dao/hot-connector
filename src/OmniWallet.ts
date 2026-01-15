@@ -1,6 +1,5 @@
 import { hex } from "@scure/base";
 
-import { openAuthPopup } from "./ui/connect/AuthPopup";
 import { WalletType } from "./core/chains";
 import { Intents } from "./core/Intents";
 import { ReviewFee } from "./core/bridge";
@@ -48,7 +47,7 @@ export abstract class OmniWallet {
   abstract signIntents(intents: Record<string, any>[], options?: { nonce?: Uint8Array; deadline?: number; signerId?: string }): Promise<Commitment>;
 
   async auth<T = string>(intents?: Record<string, any>[], options?: { domain?: string; signerId?: string; customAuth?: (commitment: Commitment, seed: string) => Promise<T> }): Promise<T> {
-    return openAuthPopup(this, async () => {
+    const authFn = async () => {
       const seed = hex.encode(new Uint8Array(window.crypto.getRandomValues(new Uint8Array(32))));
       const msgBuffer = new TextEncoder().encode(`${options?.domain || window.location.origin}_${seed}`);
       const nonce = await window.crypto.subtle.digest("SHA-256", new Uint8Array(msgBuffer));
@@ -56,7 +55,11 @@ export abstract class OmniWallet {
 
       if (options?.customAuth) return await options.customAuth(signed, seed);
       return (await api.auth(signed, seed)) as T;
-    });
+    };
+
+    if (typeof window === "undefined") return await authFn();
+    const { openAuthPopup } = await import("./ui/connect/AuthPopup");
+    return openAuthPopup(this, authFn);
   }
 
   async waitUntilBalance(need: Record<string, bigint>, receiver = this.omniAddress, attempts = 0) {

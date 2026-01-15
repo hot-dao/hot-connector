@@ -7,9 +7,9 @@ import { OmniWallet } from "../OmniWallet";
 import { WalletType } from "../core/chains";
 import { ReviewFee } from "../core/bridge";
 import { Token } from "../core/token";
-import { erc20abi } from "./abi";
 import { Commitment } from "../core";
 import { api } from "../core/api";
+import { erc20abi } from "./abi";
 
 export interface EvmProvider {
   request: (args: any) => Promise<any>;

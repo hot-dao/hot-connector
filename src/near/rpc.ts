@@ -4,7 +4,6 @@ import { TypedError, FinalExecutionOutcome } from "@near-js/types";
 import { base64 } from "@scure/base";
 
 import { api, NetworkError, TimeoutNetworkError } from "../core/api";
-import { Network } from "../core";
 
 let _nextId = 123;
 
@@ -14,7 +13,7 @@ const wait = (timeout: number) => {
   return new Promise<void>((resolve) => setTimeout(resolve, timeout));
 };
 
-const rpcUrls = [api.getRpcUrl(Network.Near), "https://relmn.aurora.dev", "https://archival-rpc.mainnet.near.org", "https://rpc-near.hapi.mobi", "https://nearrpc.aurora.dev"];
+const rpcUrls = [api.getRpcUrl(1010), "https://relmn.aurora.dev", "https://archival-rpc.mainnet.near.org", "https://rpc-near.hapi.mobi", "https://nearrpc.aurora.dev"];
 
 export class NearRpc extends JsonRpcProvider {
   public providers: string[];
