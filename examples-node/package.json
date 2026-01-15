@@ -1,0 +1,16 @@
+{
+  "name": "examples-node",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "transfer": "npx tsx transfer.ts"
+  },
+  "dependencies": {
+    "@hot-labs/kit": "1.3.3",
+    "dotenv": "^17.2.3"
+  }
+}

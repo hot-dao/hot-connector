@@ -1,18 +1,18 @@
 import "dotenv/config";
+
 import { base58 } from "@scure/base";
-import { Intents, Recipient, WalletType, tokens, Ed25519Wallet } from "../src/core";
-import { OmniToken } from "../src/core";
+import { Intents, Recipient, WalletType, tokens, Ed25519Wallet, OmniToken } from "@hot-labs/kit/core";
 
 if (!process.env.ED25519_PRIVATE_KEY_BASE58) {
   throw new Error("ED25519_PRIVATE_KEY_BASE58 is not set in .env file");
 }
 
-if (!process.env.ED25519_SIGNER_ID) {
+if (!process.env.ED25519_NEAR_SIGNER_ID) {
   throw new Error("ED25519_SIGNER_ID is not set in .env file");
 }
 
 const PRIVATE_KEY = base58.decode(process.env.ED25519_PRIVATE_KEY_BASE58);
-const SIGNER_ID = process.env.ED25519_SIGNER_ID;
+const SIGNER_ID = process.env.ED25519_NEAR_SIGNER_ID;
 
 const main = async () => {
   const wallet = new Ed25519Wallet(Buffer.from(PRIVATE_KEY), SIGNER_ID);
@@ -30,7 +30,7 @@ const main = async () => {
     })
     .execute();
 
-  console.log("Hash:", hash);
+  console.log("0.1 NEAR Transfer Hash:", hash);
 };
 
 main();
